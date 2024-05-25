@@ -2,12 +2,12 @@
 #include <stdio.h>
 #include "rsa.h"
 
-int bignum_print(bignum const *a){
+int bignum_print(bignum const *a) {
 	if (!a) return 1;
 	int i, j, k;
 	k = 127;
-	for(i = 0; i < 16; i++ ){
-		for(j = 0; j < 8; j++){
+	for(i = 0; i < 16; i++ ) {
+		for(j = 0; j < 8; j++) {
 			printf("%8x ",a->a[k--]);
 		}
 		printf("\n");
@@ -23,7 +23,7 @@ bignum bignum_zero(void) {
 	return r;
 }
 
-bignum bignum_mul(bignum const *p, bignum const *q){
+bignum bignum_mul(bignum const *p, bignum const *q) {
 	int i, j;
 	u32 L, M;
 	u64 x;
@@ -35,8 +35,8 @@ bignum bignum_mul(bignum const *p, bignum const *q){
 	if (bignum_is_one(p)) return *q;
 	if (bignum_is_one(q)) return *p;
 
-	for(i = 0; i < 128; i++){
-		for(j = 0; j < 128; j++){
+	for(i = 0; i < 128; i++) {
+		for(j = 0; j < 128; j++) {
 			if(i + j > 127) continue;
 			x = (u64) p->a[i] * q->a[j];
 			L = x;
@@ -51,7 +51,7 @@ bignum bignum_mul(bignum const *p, bignum const *q){
 
 /* Space: O(1) */
 /* Time:  O(1) */
-int bignum_is_eq(bignum const *a, bignum const *b){
+int bignum_is_eq(bignum const *a, bignum const *b) {
 	if(!a || !b) return 0;
 	int i;
 	for(i = 0; i < 128; i++) if (a->a[i] != b->a[i]) return 0;
@@ -60,10 +60,10 @@ int bignum_is_eq(bignum const *a, bignum const *b){
 
 /* Space: O(1) */
 /* Time:  O(1) */
-int bignum_is_lt(bignum const *l, bignum const *r){
+int bignum_is_lt(bignum const *l, bignum const *r) {
 	if(!l || !r) return 0;
 	int i;
-	for(i = 127; i >= 0; i--){
+	for(i = 127; i >= 0; i--) {
 		if(l->a[i] < r->a[i]) return 1;
 		if(l->a[i] > r->a[i]) return 0;
 	}
@@ -72,10 +72,10 @@ int bignum_is_lt(bignum const *l, bignum const *r){
 
 /* Space: O(1) */
 /* Time:  O(1) */
-int bignum_is_lte(bignum const *l, bignum const *r){
+int bignum_is_lte(bignum const *l, bignum const *r) {
 	if(!l || !r) return 0;
 	int i;
-	for(i = 127; i >= 0; i--){
+	for(i = 127; i >= 0; i--) {
 		if(l->a[i] < r->a[i]) return 1;
 		if(l->a[i] > r->a[i]) return 0;
 	}
@@ -84,10 +84,10 @@ int bignum_is_lte(bignum const *l, bignum const *r){
 
 /* Space: O(1) */
 /* Time:  O(1) */
-int bignum_is_gt(bignum const *l, bignum const *r){
+int bignum_is_gt(bignum const *l, bignum const *r) {
 	if(!l || !r) return 0;
 	int i;
-	for(i = 127; i >= 0; i--){
+	for(i = 127; i >= 0; i--) {
 		if(l->a[i] < r->a[i]) return 0;
 		if(l->a[i] > r->a[i]) return 1;
 	}
@@ -96,10 +96,10 @@ int bignum_is_gt(bignum const *l, bignum const *r){
 
 /* Space: O(1) */
 /* Time:  O(1) */
-int bignum_is_gte(bignum const *l, bignum const *r){
+int bignum_is_gte(bignum const *l, bignum const *r) {
 	if(!l || !r) return 0;
 	int i;
-	for(i = 127; i >= 0; i--){
+	for(i = 127; i >= 0; i--) {
 		if(l->a[i] < r->a[i]) return 0;
 		if(l->a[i] > r->a[i]) return 1;
 	}
@@ -108,7 +108,7 @@ int bignum_is_gte(bignum const *l, bignum const *r){
 
 /* Space: O(1) */
 /* Time:  O(1) */
-int bignum_is_zero(bignum const *a){
+int bignum_is_zero(bignum const *a) {
 	if(!a) return 0;
 	int i;
 	for(i = 0; i<128; i++) if(a->a[i] != 0) return 0;
@@ -117,7 +117,7 @@ int bignum_is_zero(bignum const *a){
 
 /* Space: O(1) */
 /* Time:  O(1) */
-int bignum_is_one(bignum const *a){
+int bignum_is_one(bignum const *a) {
 	if(!a) return 0;
 	int i;
 	if(a->a[0] != 1) return 0;
@@ -125,44 +125,44 @@ int bignum_is_one(bignum const *a){
 	return 1;
 }
 
-int bignum_is_even(bignum const *a){
+int bignum_is_even(bignum const *a) {
 	return a->a[0] % 2 == 0;
 }
 
-int bignum_is_odd(bignum const *a){
+int bignum_is_odd(bignum const *a) {
 	return a->a[0] % 2 == 1;
 }
 
-int bignum_bit_shift_left(bignum * a){
+int bignum_bit_shift_left(bignum * a) {
 	if (!a) return -1;
 	int i;
 	int r = a->a[127] >> 31;
-	for(i = 127; i >= 1; i--){
+	for(i = 127; i >= 1; i--) {
 		a->a[i] = (a->a[i] << 1) + (a->a[i-1]>>31);
 	}
 	a->a[0] = a->a[0] << 1;
 	return r;
 }
 
-int bignum_bit_shift_right(bignum * a){
+int bignum_bit_shift_right(bignum * a) {
 	if (!a) return -1;
 	int i;
 	int r = a->a[0] & 1;
-	for(i = 0; i < 127; i++){
+	for(i = 0; i < 127; i++) {
 		a->a[i] = (a->a[i] >> 1) + (a->a[i+1]<<31);
 	}
 	a->a[127] = a->a[127] >> 1;
 	return r;
 }
 
-int bignum_sub(bignum * a, bignum const *b){
+int bignum_sub(bignum * a, bignum const *b) {
 	/* a = a - b */
 	if(!a || !b) return 1;
 	if(bignum_is_gt(b, a)) return 1;
 
 	int i;
 	u64 c;
-	for(i = 0; i < 128; i++){
+	for(i = 0; i < 128; i++) {
 		if (a->a[i] >= b->a[i]) {
 			a->a[i] = a->a[i] - b->a[i];
 		} else {
@@ -176,7 +176,7 @@ int bignum_sub(bignum * a, bignum const *b){
 	return 0;
 }
 
-bignum bignum_mod(bignum const *a, bignum const *m){
+bignum bignum_mod(bignum const *a, bignum const *m) {
 	/* a = qm + r */
 	if (!a || !m || bignum_is_eq(a, m) || bignum_is_zero(m)) return bignum_zero();
 	if(bignum_is_lt(a, m)) return *a;
@@ -187,7 +187,7 @@ bignum bignum_mod(bignum const *a, bignum const *m){
 
 	/* long division */
 	int i;
-	for(i = 0; i < 4096; i++){
+	for(i = 0; i < 4096; i++) {
 		bignum_bit_shift_left(&r);
 		r.a[0] = r.a[0] + bignum_bit_shift_left(&scratch);
 		if(bignum_is_gte(&r,m)) bignum_sub(&r, m);
@@ -195,7 +195,7 @@ bignum bignum_mod(bignum const *a, bignum const *m){
 	return r;
 }
 
-bignum bignum_mod_exp(bignum const *b, bignum const *e, bignum const *m){
+bignum bignum_mod_exp(bignum const *b, bignum const *e, bignum const *m) {
 	/* b^e mod m */
 	if (bignum_is_zero(e)) return bignum_zero();
 
@@ -217,13 +217,13 @@ bignum bignum_mod_exp(bignum const *b, bignum const *e, bignum const *m){
 	return r;
 }
 
-bignum bignum_small(u32 x){
+bignum bignum_small(u32 x) {
 	bignum r = bignum_zero();
 	r.a[0] = x;
 	return r;
 }
 
-int miller_rabin(bignum const * n, bignum const * a){
+int miller_rabin(bignum const * n, bignum const * a) {
 	/* return 1: test fails, probably prime. */
 	/* return 0: n composite. */
 	/* return -1: invalid n */
@@ -244,7 +244,7 @@ int miller_rabin(bignum const * n, bignum const * a){
 	bignum_sub(&q, &one);
 	const bignum negative_one = q;
 	int k = 0;
-	while (bignum_is_even(&q)){
+	while (bignum_is_even(&q)) {
 		bignum_bit_shift_right(&q);
 		k++;
 	}
@@ -281,7 +281,7 @@ bignum bignum_half_random(void) {
 ** Generate random 2048 bit probable prime by performing n Miller-Rabin tests
 ** with random bases.
 */
-bignum random_large_probable_prime(int n){
+bignum random_large_probable_prime(int n) {
 	bignum witness, candidate;
 	/* Note: Failing a Miller-Rabin test indicates a candidate is probably prime. */
 	int tests_failed;
@@ -312,7 +312,7 @@ bignum random_large_probable_prime(int n){
 	return candidate;
 }
 
-int keygen(void){
+int keygen(void) {
 	bignum p, q, n;
 	
 	/* Choose two large prime numbers p and q. */
