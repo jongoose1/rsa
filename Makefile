@@ -1,4 +1,4 @@
-OUTS := mod_exp_test miller_rabin_test gcd_test mod_test prime_finder div_test
+OUTS := mod_exp_test miller_rabin_test gcd_test mod_test prime_finder div_test lcm_test
 DEPS := rsa
 CC := gcc
 CFLAGS := -O3 -flto -ansi -Wall
@@ -13,6 +13,7 @@ prime_finder.x: rsa.o
 mod_exp_test.x: rsa.o
 mod_test.x: rsa.o
 div_test.x: rsa.o
+lcm_test.x: rsa.o
 gcd_test.x: rsa.o
 miller_rabin_test.x: rsa.o
 

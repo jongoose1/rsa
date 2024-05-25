@@ -367,11 +367,13 @@ bignum bignum_gcd(bignum const *a, bignum const *b) {
 }
 
 bignum bignum_lcm(bignum const *a, bignum const *b) {
-
+	bignum ab = bignum_mul(a, b);
+	bignum gcd = bignum_gcd(a, b);
+	return bignum_div(&ab, &gcd);
 }
 
 int keygen(void) {
-	bignum p, q, n;
+	bignum p, q, n, lambda;
 	bignum const one = bignum_small(1);
 	
 	/* Choose two large prime numbers p and q. */
@@ -384,5 +386,11 @@ int keygen(void) {
 	/* Compute lambda(n) = lcm(p - 1, q - 1) */
 	bignum_sub(&p, &one);
 	bignum_sub(&q, &one);
+	lambda = bignum_lcm(&p, &q);
+
+	/* Choodean integer e such that 1 < e < lambda(n) and gcd (e, lambda(n)) = 1 */
+	bignum const e = bignum_small(65537);
+
+	/* Determine d as the multiplicative inverse of e mod lambda(n) */
 
 }
