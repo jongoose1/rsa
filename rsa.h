@@ -30,15 +30,19 @@ bignum bignum_zero();
 bignum bignum_mul(bignum const *p, bignum const *q);
 int bignum_sub(bignum *a, bignum const *b);
 bignum bignum_mod(bignum const *a, bignum const *m);
-int is_eq(bignum const *a, bignum const *b);
-int is_lt(bignum const *l, bignum const *r);
-int is_lte(bignum const *l, bignum const *r);
-int is_gt(bignum const *l, bignum const *r);
-int is_gte(bignum const *l, bignum const *r);
-int is_zero(bignum const *a);
-int is_one(bignum const *a);
-int bit_shift_left(bignum *a);
+int bignum_is_eq(bignum const *a, bignum const *b);
+int bignum_is_lt(bignum const *l, bignum const *r);
+int bignum_is_lte(bignum const *l, bignum const *r);
+int bignum_is_gt(bignum const *l, bignum const *r);
+int bignum_is_gte(bignum const *l, bignum const *r);
+int bignum_is_zero(bignum const *a);
+int bignum_is_one(bignum const *a);
+int bignum_is_even(bignum const *a);
+int bignum_is_odd(bignum const *a);
+int bignum_bit_shift_left(bignum *a);
+int bignum_bit_shift_right(bignum * a);
 bignum bignum_mod_exp(bignum const *b, bignum const *e, bignum const *m);
-int miller_rabin(bignum * n, bignum * a);
+bignum bignum_small(u32 x);
+int miller_rabin(bignum const * n, bignum const * a);
 
 #endif

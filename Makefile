@@ -1,4 +1,4 @@
-OUTS := test test2
+OUTS := test test2 miller_rabin_test
 DEPS := rsa
 CC := gcc
 CFLAGS := -O3 -flto -ansi -Wall
@@ -11,6 +11,7 @@ all: $(addsuffix .x, $(OUTS))
 
 test.x: rsa.o
 test2.x: rsa.o
+miller_rabin_test.x: rsa.o
 
 $(addsuffix .x, $(OUTS)): %.x: %.o
 
