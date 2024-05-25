@@ -47,9 +47,6 @@ bignum bignum_mul(bignum const *p, bignum const *q) {
 	return r;
 }
 
-
-/* Space: O(1) */
-/* Time:  O(1) */
 int bignum_is_eq(bignum const *a, bignum const *b) {
 	if(!a || !b) return 0;
 	int i;
@@ -57,8 +54,6 @@ int bignum_is_eq(bignum const *a, bignum const *b) {
 	return 1;
 }
 
-/* Space: O(1) */
-/* Time:  O(1) */
 int bignum_is_lt(bignum const *l, bignum const *r) {
 	if(!l || !r) return 0;
 	int i;
@@ -69,8 +64,6 @@ int bignum_is_lt(bignum const *l, bignum const *r) {
 	return 0;
 }
 
-/* Space: O(1) */
-/* Time:  O(1) */
 int bignum_is_lte(bignum const *l, bignum const *r) {
 	if(!l || !r) return 0;
 	int i;
@@ -81,8 +74,6 @@ int bignum_is_lte(bignum const *l, bignum const *r) {
 	return 1;
 }
 
-/* Space: O(1) */
-/* Time:  O(1) */
 int bignum_is_gt(bignum const *l, bignum const *r) {
 	if(!l || !r) return 0;
 	int i;
@@ -93,8 +84,6 @@ int bignum_is_gt(bignum const *l, bignum const *r) {
 	return 0;
 }
 
-/* Space: O(1) */
-/* Time:  O(1) */
 int bignum_is_gte(bignum const *l, bignum const *r) {
 	if(!l || !r) return 0;
 	int i;
@@ -105,8 +94,6 @@ int bignum_is_gte(bignum const *l, bignum const *r) {
 	return 1;
 }
 
-/* Space: O(1) */
-/* Time:  O(1) */
 int bignum_is_zero(bignum const *a) {
 	if(!a) return 0;
 	int i;
@@ -114,8 +101,6 @@ int bignum_is_zero(bignum const *a) {
 	return 1;
 }
 
-/* Space: O(1) */
-/* Time:  O(1) */
 int bignum_is_one(bignum const *a) {
 	if(!a) return 0;
 	int i;
@@ -194,6 +179,30 @@ bignum bignum_mod(bignum const *a, bignum const *m) {
 	return r;
 }
 
+int bignum_reduce(bignum *a, bignum const *m) {
+	/* a = qm + r */
+	if (!a || !m || bignum_is_zero(m)) return 1;
+	if (bignum_is_lt(a, m)) return 0;
+	if (bignum_is_eq(a, m)) {
+		*a = bignum_zero();
+		return 0;
+	}
+
+	bignum scratch;
+	scratch = *a;
+	*a = bignum_zero();
+
+	/* long division */
+	int i;
+	for(i = 0; i < 4096; i++) {
+		bignum_bit_shift_left(a);
+		a->a[0] = a->a[0] + bignum_bit_shift_left(&scratch);
+		if(bignum_is_gte(a,m)) bignum_sub(a, m);
+	}
+
+	return 0;
+}
+
 bignum bignum_mod_exp(bignum const *b, bignum const *e, bignum const *m) {
 	/* b^e mod m */
 	if (bignum_is_zero(e)) return bignum_zero();
@@ -208,10 +217,10 @@ bignum bignum_mod_exp(bignum const *b, bignum const *e, bignum const *m) {
 	for(i = 0; i < 4096; i++) {
 		if (e->a[i/32] & (1 << (i%32))) {
 			r = bignum_mul(&r, &scratch);
-			r = bignum_mod(&r, m);
+			bignum_reduce(&r, m);
 		}
 		scratch = bignum_mul(&scratch, &scratch);
-		scratch = bignum_mod(&scratch, m);
+		bignum_reduce(&scratch, m);
 	}
 	return r;
 }
@@ -236,7 +245,6 @@ int miller_rabin(bignum const * n, bignum const * a) {
 	/* Input invalid if n|a or n<3. */
 	if (bignum_is_lt(n, &three)) return -1;
 	if (bignum_is_zero(&b)) return -2;
-
 	
 	/* Write n-1 = q*2^k, with q odd */
 	bignum q = *n;
@@ -255,11 +263,10 @@ int miller_rabin(bignum const * n, bignum const * a) {
 	for (i = 0; i < k; i++) {
 		if (bignum_is_eq(&b, &negative_one)) return 1;
 		b = bignum_mul(&b, &b);
-		b = bignum_mod(&b, n);
+		bignum_reduce(&b, n);
 	}
 
 	return 0;
-
 }
 
 bignum bignum_random(void) {
