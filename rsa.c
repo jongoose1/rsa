@@ -321,7 +321,7 @@ bignum random_large_probable_prime(int n) {
 		candidate = bignum_half_random();
 		number_candidates++;
 		for (tests_failed = 0; tests_failed < n; /* Do nothing. */) {
-			witness = bignum_random();
+			witness = bignum_half_random();
 			int result = miller_rabin(&candidate, &witness);
 			if (result == -1 || result == 0) { 
 				/* Invalid candidate or candidate is composite. */
