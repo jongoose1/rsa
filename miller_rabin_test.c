@@ -11,7 +11,7 @@ int main(void) {
 	bignum a = bignum_small(WITNESS);
 
 	int r = miller_rabin(&n, &a);
-	if (r == -1)
+	if (r < 0)
 		printf("Invalid input for Miller-Rabin test.\n");
 	else if (r == 1)
 		printf("%d is probably prime.\n", CANDIDATE);

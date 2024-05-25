@@ -16,7 +16,7 @@ int bignum_print(bignum const *a){
 	return 0;
 }
 
-bignum bignum_zero(){
+bignum bignum_zero(void) {
 	bignum r;
 	int i;
 	for (i = 0; i < 128; i++) r.a[i] = 0;
@@ -226,7 +226,8 @@ bignum bignum_small(u32 x){
 int miller_rabin(bignum const * n, bignum const * a){
 	/* return 1: test fails, probably prime. */
 	/* return 0: n composite. */
-	/* return -1: invalid input */
+	/* return -1: invalid n */
+	/* return -2: invalid a */
 
 	bignum const three = bignum_small(3);
 	bignum const one = bignum_small(1);
@@ -234,7 +235,8 @@ int miller_rabin(bignum const * n, bignum const * a){
 	bignum b = bignum_mod(a, n);
 
 	/* Input invalid if n|a or n<3. */
-	if (bignum_is_zero(&b) || bignum_is_lt(n, &three)) return -1;
+	if (bignum_is_lt(n, &three)) return -1;
+	if (bignum_is_zero(&b)) return -2;
 
 	
 	/* Write n-1 = q*2^k, with q odd */
@@ -261,14 +263,65 @@ int miller_rabin(bignum const * n, bignum const * a){
 
 }
 
-/*
-int keygen(void){
-	bignum * p = new_bignum();
-	if(!p) return NULL;
-	bignum * q = new_bignum();
-	if(!q) return NULL;
-	choose p & q;
-	
+bignum bignum_random(void) {
+	bignum r;
+	int i;
+	for (i = 0; i < 128; i++) r.a[i] = rand();
+	return r;
 }
-*/
 
+bignum bignum_half_random(void) {
+	bignum r;
+	int i;
+	for (i = 0; i < 64; i++) r.a[i] = rand();
+	return r;
+}
+
+/* 
+** Generate random 2048 bit probable prime by performing n Miller-Rabin tests
+** with random bases.
+*/
+bignum random_large_probable_prime(int n){
+	bignum witness, candidate;
+	/* Note: Failing a Miller-Rabin test indicates a candidate is probably prime. */
+	int tests_failed;
+	do {
+		candidate = bignum_half_random();
+		for (tests_failed = 0; tests_failed < n; /* Do nothing. */) {
+			witness = bignum_random();
+			int result = miller_rabin(&candidate, &witness);
+			if (result == -1 || result == 0) { 
+				/* Invalid candidate or candidate is composite. */
+				if (result == 0) { 
+					bignum_print(&witness);
+					printf("is a Miller-Rabin witness for the compositeness of\n");
+					bignum_print(&candidate);
+				}
+
+				break;
+			} else if (result == 1) {
+				/* Test Failed. Candidate is probably prime. */
+				tests_failed++;
+
+				bignum_print(&candidate);
+				printf("is probabely prime.\n");
+
+			}
+		}
+	} while (tests_failed < n);
+	return candidate;
+}
+
+int keygen(void){
+	bignum p, q, n;
+	
+	/* Choose two large prime numbers p and q. */
+	p = random_large_probable_prime(10);
+	q = random_large_probable_prime(10);
+
+	/* Compute n = pq. */
+	n = bignum_mul(&p, &q);
+
+	/* Compute lambda(n). */
+
+}

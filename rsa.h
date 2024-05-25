@@ -26,7 +26,7 @@ typedef struct keypair {
 } keypair;
 
 int bignum_print(bignum const *a);
-bignum bignum_zero();
+bignum bignum_zero(void);
 bignum bignum_mul(bignum const *p, bignum const *q);
 int bignum_sub(bignum *a, bignum const *b);
 bignum bignum_mod(bignum const *a, bignum const *m);
@@ -44,5 +44,8 @@ int bignum_bit_shift_right(bignum * a);
 bignum bignum_mod_exp(bignum const *b, bignum const *e, bignum const *m);
 bignum bignum_small(u32 x);
 int miller_rabin(bignum const * n, bignum const * a);
+bignum bignum_random(void);
+bignum bignum_half_random(void);
+bignum random_large_probable_prime(int n);
 
 #endif

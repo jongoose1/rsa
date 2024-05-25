@@ -9,5 +9,8 @@ int main(void) {
 
 	bignum c = bignum_mod(&a, &b);
 	bignum_print(&c);
+
+	c = random_large_probable_prime(10);
+	bignum_print(&c);
 	return 0;
 }
