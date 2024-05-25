@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include "rsa.h"
 
-int bignum_print(const bignum *a){
+int bignum_print(bignum const *a){
 	if (!a) return 1;
 	int i, j, k;
 	k = 127;
@@ -23,7 +23,7 @@ bignum bignum_zero(){
 	return r;
 }
 
-bignum bignum_mul(const bignum *p, const bignum *q){
+bignum bignum_mul(bignum const *p, bignum const *q){
 	int i, j;
 	u32 L, M;
 	u64 x;
@@ -51,7 +51,7 @@ bignum bignum_mul(const bignum *p, const bignum *q){
 
 /* Space: O(1) */
 /* Time:  O(1) */
-int is_eq(const bignum *a, const bignum *b){
+int is_eq(bignum const *a, bignum const *b){
 	if(!a || !b) return 0;
 	int i;
 	for(i = 0; i < 128; i++) if (a->a[i] != b->a[i]) return 0;
@@ -60,7 +60,7 @@ int is_eq(const bignum *a, const bignum *b){
 
 /* Space: O(1) */
 /* Time:  O(1) */
-int is_lt(const bignum *l, const bignum *r){
+int is_lt(bignum const *l, bignum const *r){
 	if(!l || !r) return 0;
 	int i;
 	for(i = 127; i >= 0; i--){
@@ -72,7 +72,7 @@ int is_lt(const bignum *l, const bignum *r){
 
 /* Space: O(1) */
 /* Time:  O(1) */
-int is_lte(const bignum *l, const bignum *r){
+int is_lte(bignum const *l, bignum const *r){
 	if(!l || !r) return 0;
 	int i;
 	for(i = 127; i >= 0; i--){
@@ -84,7 +84,7 @@ int is_lte(const bignum *l, const bignum *r){
 
 /* Space: O(1) */
 /* Time:  O(1) */
-int is_gt(const bignum *l, const bignum *r){
+int is_gt(bignum const *l, bignum const *r){
 	if(!l || !r) return 0;
 	int i;
 	for(i = 127; i >= 0; i--){
@@ -96,7 +96,7 @@ int is_gt(const bignum *l, const bignum *r){
 
 /* Space: O(1) */
 /* Time:  O(1) */
-int is_gte(const bignum *l, const bignum *r){
+int is_gte(bignum const *l, bignum const *r){
 	if(!l || !r) return 0;
 	int i;
 	for(i = 127; i >= 0; i--){
@@ -108,7 +108,7 @@ int is_gte(const bignum *l, const bignum *r){
 
 /* Space: O(1) */
 /* Time:  O(1) */
-int is_zero(const bignum *a){
+int is_zero(bignum const *a){
 	if(!a) return 0;
 	int i;
 	for(i = 0; i<128; i++) if(a->a[i] != 0) return 0;
@@ -117,7 +117,7 @@ int is_zero(const bignum *a){
 
 /* Space: O(1) */
 /* Time:  O(1) */
-int is_one(const bignum *a){
+int is_one(bignum const *a){
 	if(!a) return 0;
 	int i;
 	if(a->a[0] != 1) return 0;
@@ -136,7 +136,7 @@ int bit_shift_left(bignum * a){
 	return r;
 }
 
-int bignum_sub(bignum * a, const bignum *b){
+int bignum_sub(bignum * a, bignum const *b){
 	/* a = a - b */
 	if(!a || !b) return 1;
 	if(is_gt(b, a)) return 1;
@@ -157,7 +157,7 @@ int bignum_sub(bignum * a, const bignum *b){
 	return 0;
 }
 
-bignum bignum_mod(const bignum *a, const bignum *m){
+bignum bignum_mod(bignum const *a, bignum const *m){
 	/* a = qm + r */
 	if (!a || !m || is_eq(a, m) || is_zero(m)) return bignum_zero();
 	if(is_lt(a, m)) return *a;
@@ -176,7 +176,7 @@ bignum bignum_mod(const bignum *a, const bignum *m){
 	return r;
 }
 
-bignum bignum_mod_exp(const bignum *b, const bignum *e, const bignum *m){
+bignum bignum_mod_exp(bignum const *b, bignum const *e, bignum const *m){
 	/* b^e mod m */
 	if (is_zero(e)) return bignum_zero();
 

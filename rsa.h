@@ -25,20 +25,20 @@ typedef struct keypair {
 	secret_key * sk;
 } keypair;
 
-int bignum_print(const bignum *a);
+int bignum_print(bignum const *a);
 bignum bignum_zero();
-bignum bignum_mul(const bignum *p, const bignum *q);
-int bignum_sub(bignum *a, const bignum *b);
-bignum bignum_mod(const bignum *a, const bignum *m);
-int is_eq(const bignum *a, const bignum *b);
-int is_lt(const bignum *l, const bignum *r);
-int is_lte(const bignum *l, const bignum *r);
-int is_gt(const bignum *l, const bignum *r);
-int is_gte(const bignum *l, const bignum *r);
-int is_zero(const bignum *a);
-int is_one(const bignum *a);
+bignum bignum_mul(bignum const *p, bignum const *q);
+int bignum_sub(bignum *a, bignum const *b);
+bignum bignum_mod(bignum const *a, bignum const *m);
+int is_eq(bignum const *a, bignum const *b);
+int is_lt(bignum const *l, bignum const *r);
+int is_lte(bignum const *l, bignum const *r);
+int is_gt(bignum const *l, bignum const *r);
+int is_gte(bignum const *l, bignum const *r);
+int is_zero(bignum const *a);
+int is_one(bignum const *a);
 int bit_shift_left(bignum *a);
-bignum bignum_mod_exp(const bignum *b, const bignum *e, const bignum *m);
+bignum bignum_mod_exp(bignum const *b, bignum const *e, bignum const *m);
 int miller_rabin(bignum * n, bignum * a);
 
 #endif
