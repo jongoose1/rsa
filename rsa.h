@@ -8,7 +8,7 @@ typedef uint64_t u64;
 typedef uint32_t u32;
 
 typedef struct bignum {
-	u32 * a; /* a[0] is LEAST SIGNIFICANT, a[127] is MOST SIGNIFICANT */
+	u32 a[128]; /* a[0] is LEAST SIGNIFICANT, a[127] is MOST SIGNIFICANT */
 } bignum;
 
 typedef struct public_key {
@@ -25,24 +25,20 @@ typedef struct keypair {
 	secret_key * sk;
 } keypair;
 
-bignum * new_bignum(void);
-int delete_bignum(bignum * bn);
-int assign(bignum * l, bignum * r);
-bignum * copy_bignum(bignum * a);
-int print_bignum(bignum * a);
-bignum * mul(bignum * p, bignum * q);
-
-int is_eq(bignum * a, bignum * b);
-int is_lt(bignum * l, bignum * r);
-int is_lte(bignum * l, bignum * r);
-int is_gt(bignum * l, bignum * r);
-int is_gte(bignum * l, bignum * r);
-int is_zero(bignum * a);
-int is_one(bignum * a);
-int bit_shift_left(bignum * a);
-int bignum_sub(bignum * a, bignum * b);
-bignum * mod_exp(bignum * b, bignum * e, bignum * m);
-bignum * mod(bignum * a, bignum * m);
+int bignum_print(const bignum *a);
+bignum bignum_zero();
+bignum bignum_mul(const bignum *p, const bignum *q);
+int bignum_sub(bignum *a, const bignum *b);
+bignum bignum_mod(const bignum *a, const bignum *m);
+int is_eq(const bignum *a, const bignum *b);
+int is_lt(const bignum *l, const bignum *r);
+int is_lte(const bignum *l, const bignum *r);
+int is_gt(const bignum *l, const bignum *r);
+int is_gte(const bignum *l, const bignum *r);
+int is_zero(const bignum *a);
+int is_one(const bignum *a);
+int bit_shift_left(bignum *a);
+bignum bignum_mod_exp(const bignum *b, const bignum *e, const bignum *m);
 int miller_rabin(bignum * n, bignum * a);
 
 #endif

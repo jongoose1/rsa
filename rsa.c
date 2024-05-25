@@ -2,41 +2,8 @@
 #include <stdio.h>
 #include "rsa.h"
 
-bignum * new_bignum(void){
-	bignum * bn = malloc(sizeof(bignum));
-	if(!bn) return NULL;
-	bn->a = calloc(128, sizeof(u32));
-	if(!bn->a){
-		free(bn);
-		return NULL;
-	}
-	return bn;
-}
-
-int delete_bignum(bignum * bn){
-	if (!bn) return 0;
-	free(bn->a);
-	free(bn);
-	return 0;
-}
-
-int assign(bignum * l, bignum * r){
-	if(!l || !r) return 1;
-	int i;
-	for(i =0;i <128; i++) l->a[i] = r->a[i];
-	return 0;
-}
-
-bignum * copy_bignum(bignum * a){
-	if(!a) return NULL;
-	int i;
-	bignum * r = new_bignum();
-	if(!r) return NULL;
-	for(i=0;i<128;i++) r->a[i] = a->a[i];
-	return r;
-}
-
-int print_bignum(bignum * a){
+int bignum_print(const bignum *a){
+	if (!a) return 1;
 	int i, j, k;
 	k = 127;
 	for(i = 0; i < 16; i++ ){
@@ -49,30 +16,33 @@ int print_bignum(bignum * a){
 	return 0;
 }
 
-bignum * mul(bignum * p, bignum * q){
-	if(!p || !q) return NULL;
+bignum bignum_zero(){
+	bignum r;
+	int i;
+	for (i = 0; i < 128; i++) r.a[i] = 0;
+	return r;
+}
+
+bignum bignum_mul(const bignum *p, const bignum *q){
 	int i, j;
 	u32 L, M;
 	u64 x;
-	bignum * r = new_bignum();
-	if(!r) return NULL;
-	if(is_zero(p) || is_zero(q)) return r;
-	if(is_one(p)) {
-		assign(r, q);
-		return r;
-	}
-	if(is_one(q)) {
-		assign(r, p);
-		return r;
-	}
+	bignum r;
+	
+	r = bignum_zero();
+
+	if (!p || !q || is_zero(p) || is_zero(q)) return r;
+	if (is_one(p)) return *q;
+	if (is_one(q)) return *p;
+
 	for(i = 0; i < 128; i++){
 		for(j = 0; j < 128; j++){
 			if(i + j > 127) continue;
 			x = (u64) p->a[i] * q->a[j];
 			L = x;
 			M = x >> 32;
-			r->a[i + j] = r->a[i + j] + L;
-			if (i + j + 1 <= 127) r->a[i + j + 1] = r->a[i + j + 1] + M;
+			r.a[i + j] = r.a[i + j] + L;
+			if (i + j + 1 <= 127) r.a[i + j + 1] = r.a[i + j + 1] + M;
 		}
 	}
 	return r;
@@ -81,7 +51,7 @@ bignum * mul(bignum * p, bignum * q){
 
 /* Space: O(1) */
 /* Time:  O(1) */
-int is_eq(bignum * a, bignum * b){
+int is_eq(const bignum *a, const bignum *b){
 	if(!a || !b) return 0;
 	int i;
 	for(i = 0; i < 128; i++) if (a->a[i] != b->a[i]) return 0;
@@ -90,7 +60,7 @@ int is_eq(bignum * a, bignum * b){
 
 /* Space: O(1) */
 /* Time:  O(1) */
-int is_lt(bignum * l, bignum * r){
+int is_lt(const bignum *l, const bignum *r){
 	if(!l || !r) return 0;
 	int i;
 	for(i = 127; i >= 0; i--){
@@ -102,7 +72,7 @@ int is_lt(bignum * l, bignum * r){
 
 /* Space: O(1) */
 /* Time:  O(1) */
-int is_lte(bignum * l, bignum * r){
+int is_lte(const bignum *l, const bignum *r){
 	if(!l || !r) return 0;
 	int i;
 	for(i = 127; i >= 0; i--){
@@ -114,7 +84,7 @@ int is_lte(bignum * l, bignum * r){
 
 /* Space: O(1) */
 /* Time:  O(1) */
-int is_gt(bignum * l, bignum * r){
+int is_gt(const bignum *l, const bignum *r){
 	if(!l || !r) return 0;
 	int i;
 	for(i = 127; i >= 0; i--){
@@ -126,7 +96,7 @@ int is_gt(bignum * l, bignum * r){
 
 /* Space: O(1) */
 /* Time:  O(1) */
-int is_gte(bignum * l, bignum * r){
+int is_gte(const bignum *l, const bignum *r){
 	if(!l || !r) return 0;
 	int i;
 	for(i = 127; i >= 0; i--){
@@ -138,7 +108,7 @@ int is_gte(bignum * l, bignum * r){
 
 /* Space: O(1) */
 /* Time:  O(1) */
-int is_zero(bignum * a){
+int is_zero(const bignum *a){
 	if(!a) return 0;
 	int i;
 	for(i = 0; i<128; i++) if(a->a[i] != 0) return 0;
@@ -147,7 +117,7 @@ int is_zero(bignum * a){
 
 /* Space: O(1) */
 /* Time:  O(1) */
-int is_one(bignum * a){
+int is_one(const bignum *a){
 	if(!a) return 0;
 	int i;
 	if(a->a[0] != 1) return 0;
@@ -166,7 +136,7 @@ int bit_shift_left(bignum * a){
 	return r;
 }
 
-int bignum_sub(bignum * a, bignum * b){
+int bignum_sub(bignum * a, const bignum *b){
 	/* a = a - b */
 	if(!a || !b) return 1;
 	if(is_gt(b, a)) return 1;
@@ -187,76 +157,52 @@ int bignum_sub(bignum * a, bignum * b){
 	return 0;
 }
 
-bignum * mod(bignum * a, bignum * m){
+bignum bignum_mod(const bignum *a, const bignum *m){
 	/* a = qm + r */
-	if (!a || !m) return NULL;
+	if (!a || !m || is_eq(a, m) || is_zero(m)) return bignum_zero();
+	if(is_lt(a, m)) return *a;
 
-
-	bignum * r = new_bignum();
-	bignum * scratch = copy_bignum(a);
-	if(!r || !scratch) {
-		delete_bignum(scratch);
-		delete_bignum(r);
-		return NULL;
-	}
-	if(is_eq(a, m)) return r;
-	if(is_lt(a, m)) {
-		assign(r, a);
-		return r;
-	}
+	bignum r, scratch;
+	r = bignum_zero();
+	scratch = *a;
 
 	/* long division */
 	int i;
 	for(i = 0; i < 4096; i++){
-		bit_shift_left(r);
-		r->a[0] = r->a[0] + bit_shift_left(scratch);
-		if(is_gte(r,m)) {
-			bignum_sub(r, m);
-		}
+		bit_shift_left(&r);
+		r.a[0] = r.a[0] + bit_shift_left(&scratch);
+		if(is_gte(&r,m)) bignum_sub(&r, m);
 	}
-	delete_bignum(scratch);
 	return r;
 }
 
-bignum * mod_exp(bignum * b, bignum * e, bignum * m){
+bignum bignum_mod_exp(const bignum *b, const bignum *e, const bignum *m){
 	/* b^e mod m */
+	if (is_zero(e)) return bignum_zero();
+
 	int i;
-	bignum * r = new_bignum();
-	bignum * scratch = copy_bignum(b);
-	if(!r || !scratch) {
-		delete_bignum(scratch);
-		delete_bignum(r);
-		return NULL;
-	}
-	r->a[0] = 1;
+	bignum r, scratch;
 
-	if (is_zero(e))
-		return r;
+	r = bignum_zero();
+	r.a[0] = 1;
+	scratch = *b;
 
-	bignum *t1, *t2;
 	for(i = 0; i < 4096; i++) {
 		if (i < 10) {
 			printf("b^2^%d:\n",i);
-			print_bignum(scratch);
+			bignum_print(&scratch);
 		}
 		if (e->a[i/32] & (1 << (i%32))) {
 			printf("Word: %d, Bit: %d is 1\n", i/32, i%32);
-			t1 = mul(r, scratch);
-			t2 = mod(t1, m);
-			delete_bignum(t1);
-			t1 = r;
-			delete_bignum(t1);
-			r = t2;
+			r = bignum_mul(&r, &scratch);
+			r = bignum_mod(&r, m);
+			/* @todo use reduce() */
 			printf("New Total:\n");
-			print_bignum(r);
+			bignum_print(&r);
 		}
-		t1 = mul(scratch, scratch);
-		t2 = mod(t1, m);
-		delete_bignum(t1);
-		delete_bignum(scratch);
-		scratch = t2;
+		scratch = bignum_mul(&scratch, &scratch);
+		scratch = bignum_mod(&scratch, m);
 	}
-	delete_bignum(scratch);
 	return r;
 }
 
