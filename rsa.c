@@ -12,7 +12,6 @@ int bignum_print(bignum const *a) {
 		}
 		printf("\n");
 	}
-	printf("\n");
 	return 0;
 }
 
@@ -296,6 +295,7 @@ bignum random_large_probable_prime(int n) {
 					bignum_print(&witness);
 					printf("is a Miller-Rabin witness for the compositeness of\n");
 					bignum_print(&candidate);
+					printf("\n");
 				}
 
 				break;
