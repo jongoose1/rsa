@@ -1,4 +1,4 @@
-OUTS := test test2 miller_rabin_test
+OUTS := mod_exp_test miller_rabin_test gcd_test mod_test prime_finder
 DEPS := rsa
 CC := gcc
 CFLAGS := -O3 -flto -ansi -Wall
@@ -9,8 +9,10 @@ RM := rm -f
 .PHONY: all
 all: $(addsuffix .x, $(OUTS))
 
-test.x: rsa.o
-test2.x: rsa.o
+prime_finder.x: rsa.o
+mod_exp_test.x: rsa.o
+mod_test.x: rsa.o
+gcd_test.x: rsa.o
 miller_rabin_test.x: rsa.o
 
 $(addsuffix .x, $(OUTS)): %.x: %.o

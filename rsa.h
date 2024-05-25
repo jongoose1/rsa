@@ -48,5 +48,7 @@ int miller_rabin(bignum const * n, bignum const * a);
 bignum bignum_random(void);
 bignum bignum_half_random(void);
 bignum random_large_probable_prime(int n);
+bignum bignum_gcd(bignum const *a, bignum const *b);
+bignum bignum_lcm(bignum const *a, bignum const *b);
 
 #endif

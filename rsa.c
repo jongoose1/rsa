@@ -160,6 +160,30 @@ int bignum_sub(bignum * a, bignum const *b) {
 	return 0;
 }
 
+bignum bignum_div(bignum const *a, bignum const *m) {
+	/* a = qm + r */
+	if (!a || !m || bignum_is_lt(a, m) || bignum_is_zero(m)) return bignum_zero();
+	if(bignum_is_eq(a, m)) return bignum_small(1);
+
+	bignum r, q, scratch;
+	r = bignum_zero();
+	q = bignum_zero();
+	scratch = *a;
+
+	/* long division */
+	int i;
+	for(i = 0; i < 4096; i++) {
+		bignum_bit_shift_left(&r);
+		bignum_bit_shift_left(&q);
+		r.a[0] = r.a[0] + bignum_bit_shift_left(&scratch);
+		if(bignum_is_gte(&r,m)) {
+			bignum_sub(&r, m);
+			q.a[0] = q.a[0] + 1;
+		}
+	}
+	return q;
+}
+
 bignum bignum_mod(bignum const *a, bignum const *m) {
 	/* a = qm + r */
 	if (!a || !m || bignum_is_eq(a, m) || bignum_is_zero(m)) return bignum_zero();
@@ -280,6 +304,7 @@ bignum bignum_half_random(void) {
 	bignum r;
 	int i;
 	for (i = 0; i < 64; i++) r.a[i] = rand();
+	for (i = 64; i < 128; i++) r.a[i] = 0;
 	return r;
 }
 
@@ -291,8 +316,10 @@ bignum random_large_probable_prime(int n) {
 	bignum witness, candidate;
 	/* Note: Failing a Miller-Rabin test indicates a candidate is probably prime. */
 	int tests_failed;
+	int number_candidates = 0;
 	do {
 		candidate = bignum_half_random();
+		number_candidates++;
 		for (tests_failed = 0; tests_failed < n; /* Do nothing. */) {
 			witness = bignum_random();
 			int result = miller_rabin(&candidate, &witness);
@@ -300,7 +327,7 @@ bignum random_large_probable_prime(int n) {
 				/* Invalid candidate or candidate is composite. */
 				if (result == 0) { 
 					bignum_print(&witness);
-					printf("is a Miller-Rabin witness for the compositeness of\n");
+					printf("is a Miller-Rabin witness for the compositeness of candidate #%d:\n", number_candidates);
 					bignum_print(&candidate);
 					printf("\n");
 				}
@@ -319,8 +346,33 @@ bignum random_large_probable_prime(int n) {
 	return candidate;
 }
 
+bignum bignum_gcd(bignum const *a, bignum const *b) {
+	if (!a || !b || bignum_is_zero(a) || bignum_is_zero(b)) return bignum_small(0);
+	if (bignum_is_one(a) || bignum_is_one(b)) return bignum_small(1);
+
+	bignum r1, r2, *p1, *p2, *temp;
+	r1 = *a;
+	r2 = *b;
+	p1 = &r1;
+	p2 = &r2;
+
+	while (!bignum_is_zero(p2)) {
+		bignum_reduce(p1, p2);
+		temp = p1;
+		p1 = p2;
+		p2 = temp;
+	}
+
+	return *p1;
+}
+
+bignum bignum_lcm(bignum const *a, bignum const *b) {
+
+}
+
 int keygen(void) {
 	bignum p, q, n;
+	bignum const one = bignum_small(1);
 	
 	/* Choose two large prime numbers p and q. */
 	p = random_large_probable_prime(10);
@@ -329,6 +381,8 @@ int keygen(void) {
 	/* Compute n = pq. */
 	n = bignum_mul(&p, &q);
 
-	/* Compute lambda(n). */
+	/* Compute lambda(n) = lcm(p - 1, q - 1) */
+	bignum_sub(&p, &one);
+	bignum_sub(&q, &one);
 
 }
