@@ -29,6 +29,7 @@ int bignum_print(bignum const *a);
 bignum bignum_zero(void);
 bignum bignum_mul(bignum const *p, bignum const *q);
 int bignum_sub(bignum *a, bignum const *b);
+bignum bignum_div(bignum const *a, bignum const *m);
 bignum bignum_mod(bignum const *a, bignum const *m);
 int bignum_reduce(bignum *a, bignum const *m);
 int bignum_is_eq(bignum const *a, bignum const *b);
