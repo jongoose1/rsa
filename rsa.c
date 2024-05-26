@@ -6,6 +6,7 @@ int bignum_print(bignum const *a) {
 	if (!a) return 1;
 	int i, j, k;
 	k = 127;
+	printf("Sign:  %d\n", a->sign?1:0);
 	for(i = 0; i < 16; i++ ) {
 		for(j = 0; j < 8; j++) {
 			printf("%8x ",a->a[k--]);
@@ -19,6 +20,7 @@ bignum bignum_zero(void) {
 	bignum r;
 	int i;
 	for (i = 0; i < 128; i++) r.a[i] = 0;
+	r.sign = 0;
 	return r;
 }
 
@@ -44,57 +46,12 @@ bignum bignum_mul(bignum const *p, bignum const *q) {
 			if (i + j + 1 <= 127) r.a[i + j + 1] = r.a[i + j + 1] + M;
 		}
 	}
+	r.sign = (p->sign != q->sign);
 	return r;
 }
 
-int bignum_is_eq(bignum const *a, bignum const *b) {
-	if(!a || !b) return 0;
-	int i;
-	for(i = 0; i < 128; i++) if (a->a[i] != b->a[i]) return 0;
-	return 1;
-}
-
-int bignum_is_lt(bignum const *l, bignum const *r) {
-	if(!l || !r) return 0;
-	int i;
-	for(i = 127; i >= 0; i--) {
-		if(l->a[i] < r->a[i]) return 1;
-		if(l->a[i] > r->a[i]) return 0;
-	}
-	return 0;
-}
-
-int bignum_is_lte(bignum const *l, bignum const *r) {
-	if(!l || !r) return 0;
-	int i;
-	for(i = 127; i >= 0; i--) {
-		if(l->a[i] < r->a[i]) return 1;
-		if(l->a[i] > r->a[i]) return 0;
-	}
-	return 1;
-}
-
-int bignum_is_gt(bignum const *l, bignum const *r) {
-	if(!l || !r) return 0;
-	int i;
-	for(i = 127; i >= 0; i--) {
-		if(l->a[i] < r->a[i]) return 0;
-		if(l->a[i] > r->a[i]) return 1;
-	}
-	return 0;
-}
-
-int bignum_is_gte(bignum const *l, bignum const *r) {
-	if(!l || !r) return 0;
-	int i;
-	for(i = 127; i >= 0; i--) {
-		if(l->a[i] < r->a[i]) return 0;
-		if(l->a[i] > r->a[i]) return 1;
-	}
-	return 1;
-}
-
 int bignum_is_zero(bignum const *a) {
+	/* -0 == 0 */
 	if(!a) return 0;
 	int i;
 	for(i = 0; i<128; i++) if(a->a[i] != 0) return 0;
@@ -102,11 +59,49 @@ int bignum_is_zero(bignum const *a) {
 }
 
 int bignum_is_one(bignum const *a) {
+	/* -1 != 1 */
 	if(!a) return 0;
 	int i;
 	if(a->a[0] != 1) return 0;
 	for(i = 1; i<128; i++) if(a->a[i] != 0) return 0;
+	if (a->sign) return 0;
 	return 1;
+}
+
+int bignum_is_eq(bignum const *a, bignum const *b) {
+	/* -0 == 0 */
+	if (!a || !b) return 0;
+	if (bignum_is_zero(a) && bignum_is_zero(b)) return 1;
+	int i;
+	for (i = 0; i < 128; i++) if (a->a[i] != b->a[i]) return 0;
+	return (a->sign == b->sign);
+}
+
+int bignum_is_gt(bignum const *l, bignum const *r) {
+	/* -0 !> 0 */
+	if(!l || !r) return 0;
+	if (bignum_is_eq(l, r)) return 0;
+	if (l->sign && !r->sign) return 0;
+	if (!l->sign && r->sign) return 1;
+	
+	/* Same sign. */
+	int i;
+	for(i = 127; i >= 0; i--) {
+		if(l->a[i] < r->a[i]) return l->sign;
+		if(l->a[i] > r->a[i]) return !l->sign;
+	}
+	return l->sign;
+}
+
+int bignum_is_gte(bignum const *l, bignum const *r) {
+	return bignum_is_gt(l, r) || bignum_is_eq(l, r);
+}
+int bignum_is_lt(bignum const *l, bignum const *r) {
+	return !bignum_is_gte(l, r);
+}
+
+int bignum_is_lte(bignum const *l, bignum const *r) {
+	return !bignum_is_gt(l, r);
 }
 
 int bignum_is_even(bignum const *a) {
@@ -139,9 +134,76 @@ int bignum_bit_shift_right(bignum * a) {
 	return r;
 }
 
-int bignum_sub(bignum * a, bignum const *b) {
+
+/* Helper. Like inplace sub, but not inplace. */
+bignum simple_sub(bignum const *a, bignum const *b, int sign) {
+	/* r = |a| - |b| */
+	/* sign(r) = sign */
+	/* prereq: |a| >= |b| */
+	if(!a || !b) return bignum_zero();
+
+	int i;
+	u64 c;
+	bignum r = *a;
+	for(i = 0; i < 128; i++) {
+		if (r.a[i] >= b->a[i]) {
+			r.a[i] = r.a[i] - b->a[i];
+		} else {
+			/* need to borrow */
+			r.a[i + 1] = r.a[i + 1] - 1;
+			c = r.a[i] + 0x100000000;
+			r.a[i] = c - b->a[i];
+		}
+	}
+	r.sign = sign;
+	return r;
+}
+
+bignum simple_add(bignum const *a, bignum const *b, int sign) {
+	/* r = |a| + |b| */
+	/* sign(r) = sign */
+	if (!a || !b) return bignum_zero();
+
+	int i;
+	u64 c;
+	u32 M, L;
+	bignum r = bignum_zero();
+	for (i = 0; i < 128; i++) {
+		c = a->a[i] + b->a[i];
+		L = c;
+		M = c >> 32;
+		r.a[i] = r.a[i] + L;
+		if (i < 127) r.a[i+1] = r.a[i+1] + M;
+	}
+	r.sign = sign;
+	return r;
+}
+
+bignum bignum_sub(bignum const *a, bignum const *b) {
+	/* r = a - b */
+	if (!a || !b) return bignum_zero();
+	if (bignum_is_zero(b)) return *a;
+	if (bignum_is_zero(a)) {
+		bignum r = *b;
+		r.sign = !r.sign;
+		return r;
+	}
+	if (!a->sign && !b->sign) {
+		return bignum_is_gt(a, b)?simple_sub(a, b, 0):simple_sub(b, a, 0);
+	} else if (!a->sign && b->sign) {
+		return simple_add(a, b, 0);
+	} else if (a->sign && !b->sign) {
+		return simple_add(a, b, 1);
+	} else {
+		return bignum_is_gt(a, b)?simple_sub(b, a, 0):simple_sub(a, b, 1);
+	}
+}
+
+int bignum_inplace_sub(bignum * a, bignum const *b) {
 	/* a = a - b */
+	/* a and b non-negative */
 	if(!a || !b) return 1;
+	if(a->sign || b->sign) return 1;
 	if(bignum_is_gt(b, a)) return 1;
 
 	int i;
@@ -156,28 +218,59 @@ int bignum_sub(bignum * a, bignum const *b) {
 			a->a[i] = c - b->a[i];
 		}
 	}
-
 	return 0;
 }
 
-bignum bignum_div(bignum const *a, bignum const *m) {
+int bezout_coefficients(bignum const *a, bignum const *b, bignum *x, bignum *y) {
+	if (!a || !b || bignum_is_zero(a) || bignum_is_zero(b)) return 1;
+
+	/* Use rotating indices */
+	int i;
+	bignum quotients[3], remainders[3], s[3], t[3], scratch;
+	
+	remainders[0] = *a;
+	remainders[1] = *b;
+	s[0] = bignum_small(1);
+	s[1] = bignum_small(0);
+	t[0] = bignum_small(0);
+	t[1] = bignum_small(1);
+
+	i = 1;
+	do { 
+		i = (i + 1) % 3;
+		quotients[i] = bignum_div(&remainders[(i+1)%3], &remainders[(i+2)%3], &remainders[i]);
+		scratch = bignum_mul(&quotients[i], &s[(i+2)%3]);
+		s[i] = bignum_sub(&s[(i+1)%3], &scratch);
+		scratch = bignum_mul(&quotients[i], &t[(i+2)%3]);
+		t[i] = bignum_sub(&t[(i+1)%3], &scratch);
+	} while (!bignum_is_zero(&remainders[i]));
+	*x = s[(i+2)%3];
+	*y = t[(i+2)%3];
+	return 0;
+}
+
+bignum bignum_div(bignum const *a, bignum const *m, bignum * r) {
 	/* a = qm + r */
 	if (!a || !m || bignum_is_lt(a, m) || bignum_is_zero(m)) return bignum_zero();
-	if(bignum_is_eq(a, m)) return bignum_small(1);
-
-	bignum r, q, scratch;
-	r = bignum_zero();
+	
+	bignum r_deref, q, scratch;
 	q = bignum_zero();
 	scratch = *a;
+
+	if (!r) r = &r_deref; /* Discard remainder. */
+
+	*r = bignum_zero();
+
+	if (bignum_is_eq(a, m)) return bignum_small(1);
 
 	/* long division */
 	int i;
 	for(i = 0; i < 4096; i++) {
-		bignum_bit_shift_left(&r);
+		bignum_bit_shift_left(r);
 		bignum_bit_shift_left(&q);
-		r.a[0] = r.a[0] + bignum_bit_shift_left(&scratch);
-		if(bignum_is_gte(&r,m)) {
-			bignum_sub(&r, m);
+		r->a[0] = r->a[0] + bignum_bit_shift_left(&scratch);
+		if(bignum_is_gte(r, m)) {
+			bignum_inplace_sub(r, m);
 			q.a[0] = q.a[0] + 1;
 		}
 	}
@@ -198,7 +291,7 @@ bignum bignum_mod(bignum const *a, bignum const *m) {
 	for(i = 0; i < 4096; i++) {
 		bignum_bit_shift_left(&r);
 		r.a[0] = r.a[0] + bignum_bit_shift_left(&scratch);
-		if(bignum_is_gte(&r,m)) bignum_sub(&r, m);
+		if(bignum_is_gte(&r,m)) bignum_inplace_sub(&r, m);
 	}
 	return r;
 }
@@ -221,7 +314,7 @@ int bignum_reduce(bignum *a, bignum const *m) {
 	for(i = 0; i < 4096; i++) {
 		bignum_bit_shift_left(a);
 		a->a[0] = a->a[0] + bignum_bit_shift_left(&scratch);
-		if(bignum_is_gte(a,m)) bignum_sub(a, m);
+		if(bignum_is_gte(a,m)) bignum_inplace_sub(a, m);
 	}
 
 	return 0;
@@ -272,7 +365,7 @@ int miller_rabin(bignum const * n, bignum const * a) {
 	
 	/* Write n-1 = q*2^k, with q odd */
 	bignum q = *n;
-	bignum_sub(&q, &one);
+	bignum_inplace_sub(&q, &one);
 	const bignum negative_one = q;
 	int k = 0;
 	while (bignum_is_even(&q)) {
@@ -369,7 +462,7 @@ bignum bignum_gcd(bignum const *a, bignum const *b) {
 bignum bignum_lcm(bignum const *a, bignum const *b) {
 	bignum ab = bignum_mul(a, b);
 	bignum gcd = bignum_gcd(a, b);
-	return bignum_div(&ab, &gcd);
+	return bignum_div(&ab, &gcd, 0);
 }
 
 int keygen(void) {
@@ -384,8 +477,8 @@ int keygen(void) {
 	n = bignum_mul(&p, &q);
 
 	/* Compute lambda(n) = lcm(p - 1, q - 1) */
-	bignum_sub(&p, &one);
-	bignum_sub(&q, &one);
+	bignum_inplace_sub(&p, &one);
+	bignum_inplace_sub(&q, &one);
 	lambda = bignum_lcm(&p, &q);
 
 	/* Choodean integer e such that 1 < e < lambda(n) and gcd (e, lambda(n)) = 1 */

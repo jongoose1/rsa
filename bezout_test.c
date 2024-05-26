@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include "rsa.h"
 
-/* Try 99 / 5 = 19 */
+/* Try 240 and 46. -9*240 + 47*46 = 2 */
 
 int main(int argc, char ** argv) {
 
@@ -14,9 +14,11 @@ int main(int argc, char ** argv) {
 
 	bignum a = bignum_small(atoi(argv[1]));
 	bignum b = bignum_small(atoi(argv[2]));
+	bignum x, y;
 
-	bignum c = bignum_div(&a, &b, 0);
-	bignum_print(&c);
+	bezout_coefficients(&a, &b, &x, &y);
+	bignum_print(&x);
+	bignum_print(&y);
 
 	return 0;
 }

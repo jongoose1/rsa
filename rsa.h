@@ -9,6 +9,7 @@ typedef uint32_t u32;
 
 typedef struct bignum {
 	u32 a[128]; /* a[0] is LEAST SIGNIFICANT, a[127] is MOST SIGNIFICANT */
+	int sign;   /* zero = positive, non-zero = negative */
 } bignum;
 
 typedef struct public_key {
@@ -28,8 +29,9 @@ typedef struct keypair {
 int bignum_print(bignum const *a);
 bignum bignum_zero(void);
 bignum bignum_mul(bignum const *p, bignum const *q);
-int bignum_sub(bignum *a, bignum const *b);
-bignum bignum_div(bignum const *a, bignum const *m);
+int bignum_inplace_sub(bignum *a, bignum const *b);
+bignum bignum_sub(bignum const *a, bignum const *b);
+bignum bignum_div(bignum const *a, bignum const *m, bignum *r);
 bignum bignum_mod(bignum const *a, bignum const *m);
 int bignum_reduce(bignum *a, bignum const *m);
 int bignum_is_eq(bignum const *a, bignum const *b);
@@ -46,6 +48,7 @@ int bignum_bit_shift_right(bignum * a);
 bignum bignum_mod_exp(bignum const *b, bignum const *e, bignum const *m);
 bignum bignum_small(u32 x);
 int miller_rabin(bignum const * n, bignum const * a);
+int bezout_coefficients(bignum const *a, bignum const *b, bignum *x, bignum *y);
 bignum bignum_random(void);
 bignum bignum_half_random(void);
 bignum random_large_probable_prime(int n);
