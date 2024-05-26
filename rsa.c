@@ -353,6 +353,7 @@ int miller_rabin(bignum const * n, bignum const * a) {
 	/* return 0: n composite. */
 	/* return -1: invalid n */
 	/* return -2: invalid a */
+	/* n = candidate, a = witness */
 
 	bignum const three = bignum_small(3);
 	bignum const one = bignum_small(1);
@@ -408,9 +409,9 @@ bignum bignum_half_random(void) {
 bignum random_large_probable_prime(int n) {
 	bignum witness, candidate;
 	/* Note: Failing a Miller-Rabin test indicates a candidate is probably prime. */
-	int tests_failed;
+	int tests_failed = 0;
 	int number_candidates = 0;
-	do {
+	while (tests_failed < n) {
 		candidate = bignum_half_random();
 		number_candidates++;
 		for (tests_failed = 0; tests_failed < n; /* Do nothing. */) {
@@ -432,10 +433,9 @@ bignum random_large_probable_prime(int n) {
 
 				bignum_print(&candidate);
 				printf("is probabely prime.\n");
-
 			}
 		}
-	} while (tests_failed < n);
+	}
 	return candidate;
 }
 

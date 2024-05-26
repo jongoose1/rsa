@@ -1,4 +1,5 @@
-OUTS := mod_exp_test miller_rabin_test gcd_test mod_test prime_finder div_test lcm_test bezout_test
+OUTS := mod_exp_test miller_rabin_test gcd_test mod_test prime_finder div_test \
+lcm_test bezout_test prime_tester
 DEPS := rsa
 CC := gcc
 CFLAGS := -O3 -flto -ansi -Wall
@@ -10,6 +11,7 @@ RM := rm -f
 all: $(addsuffix .x, $(OUTS))
 
 prime_finder.x: rsa.o
+prime_tester.x: rsa.o
 mod_exp_test.x: rsa.o
 mod_test.x: rsa.o
 div_test.x: rsa.o
