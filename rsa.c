@@ -485,5 +485,18 @@ int keygen(void) {
 	bignum const e = bignum_small(65537);
 
 	/* Determine d as the multiplicative inverse of e mod lambda(n) */
+	bignum d, c;
+	bezout_coefficients(&e, &lambda, &d, &c);
 
+	printf("Public Key:\n");
+	printf("n:\n");
+	bignum_print(&n);
+	printf("e:\n");
+	bignum_print(&e);
+	printf("\n");
+	printf("Private Key:\n");
+	printf("d:\n");
+	bignum_print(&d);
+
+	return 0;
 }
