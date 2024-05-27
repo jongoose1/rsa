@@ -9,7 +9,7 @@ int bignum_print(bignum const *a) {
 	printf("Sign:  %d\n", a->sign?1:0);
 	for(i = 0; i < 16; i++ ) {
 		for(j = 0; j < 8; j++) {
-			printf("%8x ",a->a[k--]);
+			printf("%08x ",a->a[k--]);
 		}
 		printf("\n");
 	}
@@ -24,12 +24,24 @@ bignum bignum_zero(void) {
 	return r;
 }
 
+int bignum_inplace_add(bignum * b, int i, u32 u) {
+	/* b = b + u*2^(32*i) */
+	u64 r;
+	while(i < 128 && u) {
+		r = (u64) b->a[i] + u;
+		b->a[i] = r;
+		u = r >> 32;
+		i++;
+	}
+	return u;
+}
+
 bignum bignum_mul(bignum const *p, bignum const *q) {
 	int i, j;
 	u32 L, M;
 	u64 x;
 	bignum r;
-	
+
 	r = bignum_zero();
 
 	if (!p || !q || bignum_is_zero(p) || bignum_is_zero(q)) return r;
@@ -38,12 +50,12 @@ bignum bignum_mul(bignum const *p, bignum const *q) {
 
 	for(i = 0; i < 128; i++) {
 		for(j = 0; j < 128; j++) {
-			if(i + j > 127) continue;
+			if(i + j > 127 || p->a[i] == 0 || q->a[j] == 0) continue;
 			x = (u64) p->a[i] * q->a[j];
 			L = x;
 			M = x >> 32;
-			r.a[i + j] = r.a[i + j] + L;
-			if (i + j + 1 <= 127) r.a[i + j + 1] = r.a[i + j + 1] + M;
+			bignum_inplace_add(&r, i+j, L);
+			bignum_inplace_add(&r, i+j+1, M);
 		}
 	}
 	r.sign = (p->sign != q->sign);
@@ -322,14 +334,13 @@ int bignum_reduce(bignum *a, bignum const *m) {
 
 bignum bignum_mod_exp(bignum const *b, bignum const *e, bignum const *m) {
 	/* b^e mod m */
-	if (bignum_is_zero(e)) return bignum_zero();
+	if (bignum_is_zero(e)) return bignum_small(1);
 
 	int i;
 	bignum r, scratch;
 
-	r = bignum_zero();
-	r.a[0] = 1;
-	scratch = *b;
+	r = bignum_small(1);
+	scratch = bignum_mod(b, m);
 
 	for(i = 0; i < 4096; i++) {
 		if (e->a[i/32] & (1 << (i%32))) {
@@ -391,6 +402,7 @@ bignum bignum_random(void) {
 	bignum r;
 	int i;
 	for (i = 0; i < 128; i++) r.a[i] = rand();
+	r.sign = 0;
 	return r;
 }
 
@@ -399,6 +411,7 @@ bignum bignum_half_random(void) {
 	int i;
 	for (i = 0; i < 64; i++) r.a[i] = rand();
 	for (i = 64; i < 128; i++) r.a[i] = 0;
+	r.sign = 0;
 	return r;
 }
 
@@ -414,8 +427,9 @@ bignum random_large_probable_prime(int n) {
 	while (tests_failed < n) {
 		candidate = bignum_half_random();
 		number_candidates++;
-		for (tests_failed = 0; tests_failed < n; /* Do nothing. */) {
-			witness = bignum_half_random();
+		tests_failed = 0;
+		while (tests_failed < n) {
+			witness = bignum_random();
 			int result = miller_rabin(&candidate, &witness);
 			if (result == -1 || result == 0) { 
 				/* Invalid candidate or candidate is composite. */

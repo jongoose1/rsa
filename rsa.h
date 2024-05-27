@@ -29,6 +29,7 @@ typedef struct keypair {
 int bignum_print(bignum const *a);
 bignum bignum_zero(void);
 bignum bignum_mul(bignum const *p, bignum const *q);
+int bignum_inplace_add(bignum * b, int i, u32 u);
 int bignum_inplace_sub(bignum *a, bignum const *b);
 bignum bignum_sub(bignum const *a, bignum const *b);
 bignum bignum_div(bignum const *a, bignum const *m, bignum *r);
