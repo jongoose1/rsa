@@ -479,7 +479,7 @@ bignum bignum_lcm(bignum const *a, bignum const *b) {
 	return bignum_div(&ab, &gcd, 0);
 }
 
-int keygen(void) {
+keypair keygen(void) {
 	bignum p, q, n, lambda;
 	bignum const one = bignum_small(1);
 	
@@ -502,15 +502,49 @@ int keygen(void) {
 	bignum d, c;
 	bezout_coefficients(&e, &lambda, &d, &c);
 
+	keypair keys;
+	keys.pk.e = e;
+	keys.pk.n = n;
+	keys.sk.d = d;
+	return keys;
+}
+
+int keypair_save(keypair const *keys, char * filename) {
+	int r;
+	FILE *f;
+	if (!filename) return 1;
+	f = fopen(filename, "wb");
+	if (!f) return 2;
+	r = fwrite(keys, sizeof(keypair), 1, f);
+	if (r != 1) return 3;
+	r = fclose(f);
+	if (r) return 4;
+	return 0;
+}
+
+int keypair_load(keypair *keys, char * filename) {
+	int r;
+	FILE *f;
+	if (!filename) return 1;
+	f = fopen(filename, "rb");
+	if (!f) return 2;
+	r = fread(keys, sizeof(keypair), 1, f);
+	if (r != 1) return 3;
+	r = fclose(f);
+	if (r) return 4;
+	return 0;
+}
+
+int keypair_print(keypair const *keys) {
+	if (!keys) return 1;
 	printf("Public Key:\n");
-	printf("n:\n");
-	bignum_print(&n);
 	printf("e:\n");
-	bignum_print(&e);
+	bignum_print(&keys->pk.e);
+	printf("n:\n");
+	bignum_print(&keys->pk.n);
 	printf("\n");
 	printf("Private Key:\n");
 	printf("d:\n");
-	bignum_print(&d);
-
+	bignum_print(&keys->sk.d);
 	return 0;
 }

@@ -13,17 +13,17 @@ typedef struct bignum {
 } bignum;
 
 typedef struct public_key {
-	bignum * e;
-	bignum * n;
+	bignum e;
+	bignum n;
 } public_key;
 
 typedef struct secret_key {
-	bignum * d;
+	bignum d;
 } secret_key;
 
 typedef struct keypair {
-	public_key * pk;
-	secret_key * sk;
+	public_key pk;
+	secret_key sk;
 } keypair;
 
 int bignum_print(bignum const *a);
@@ -55,5 +55,9 @@ bignum bignum_half_random(void);
 bignum random_large_probable_prime(int n);
 bignum bignum_gcd(bignum const *a, bignum const *b);
 bignum bignum_lcm(bignum const *a, bignum const *b);
+int keypair_save(keypair const *keys, char * filename);
+int keypair_load(keypair *keys, char * filename);
+int keypair_print(keypair const *keys);
+keypair keygen(void);
 
 #endif
