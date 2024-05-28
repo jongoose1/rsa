@@ -393,6 +393,15 @@ bignum bignum_half_random(void) {
 	return r;
 }
 
+bignum bignum_quarter_random(void) {
+	bignum r;
+	int i;
+	for (i = 0; i < 32; i++) r.a[i] = rand();
+	for (i = 32; i < 128; i++) r.a[i] = 0;
+	r.sign = 0;
+	return r;
+}
+
 /* 
 ** Generate random 2048 bit probable prime by performing n Miller-Rabin tests
 ** with random bases.
@@ -403,7 +412,7 @@ bignum random_large_probable_prime(int n) {
 	int tests_failed = 0;
 	int number_candidates = 0;
 	while (tests_failed < n) {
-		candidate = bignum_half_random();
+		candidate = bignum_quarter_random();
 		number_candidates++;
 		tests_failed = 0;
 		while (tests_failed < n) {
@@ -461,13 +470,20 @@ bignum bignum_lcm(bignum const *a, bignum const *b) {
 keypair keygen(void) {
 	bignum p, q, n, lambda;
 	bignum const one = bignum_small(1);
-	
-	/* Choose two large prime numbers p and q. */
-	p = random_large_probable_prime(10);
-	q = random_large_probable_prime(10);
+	bignum n_minimum = bignum_zero();
+	n_minimum.a[63] = 1;
 
-	/* Compute n = pq. */
-	n = bignum_mul(&p, &q);
+	n = bignum_zero();
+
+	
+	while (bignum_is_lt(&n, &n_minimum)) {
+		/* Choose two large prime numbers p and q. */
+		p = random_large_probable_prime(10);
+		q = random_large_probable_prime(10);
+	
+		/* Compute n = pq. */
+		n = bignum_mul(&p, &q);
+	}
 
 	/* Compute lambda(n) = lcm(p - 1, q - 1) */
 	inplace_sub(&p, &one);
@@ -488,10 +504,48 @@ keypair keygen(void) {
 	return keys;
 }
 
-int keypair_save(keypair const *keys, char * filename) {
+int inplace_encrypt(bignum * m, public_key const *pk) {
+	if (!m || !pk || bignum_is_zero(&pk->n)) return 1;
+	*m = bignum_mod_exp(m ,&pk->e, &pk->n);
+	return 0;
+}
+
+bignum encrypt(bignum const *m, public_key const *pk) {
+	bignum r = *m;
+	return inplace_encrypt(&r, pk)?bignum_zero():r;
+}
+
+int inplace_decrypt(bignum * m, keypair const *kp) {
+	if (!m || !kp || bignum_is_zero(&kp->pk.n)) return 1;
+	*m = bignum_mod_exp(m ,&kp->sk.d, &kp->pk.n);
+	return 0;
+}
+
+bignum decrypt(bignum const *m, keypair const *kp) {
+	bignum r = *m;
+	return inplace_decrypt(&r, kp)?bignum_zero():r;
+}
+
+#if 0
+int encrypt_file(char const *fplainname, public_key const *pk) {
+	int r;
+	FILE *fplain, *fcipher;
+	char fciphername[100];
+	if(!filename || !pk || bignum_is_zero(&pk->n) || strlen(fplainname) > 95) return 1;
+	fplain = fopen(fplainname, "rb");
+	if (!fplain) return 1;
+	fciphername[0] = '\0';
+	strncat(fciphername, fplainname, 95);
+	strncat(fciphername, ".enc",4);
+	fcipher = fopen(fciphername, "wb");
+	if (!fcipher) return 1;
+}
+#endif
+
+int keypair_save(keypair const *keys, char const *filename) {
 	int r;
 	FILE *f;
-	if (!filename) return 1;
+	if (!filename || !keys) return 1;
 	f = fopen(filename, "wb");
 	if (!f) return 2;
 	r = fwrite(keys, sizeof(keypair), 1, f);
@@ -501,10 +555,10 @@ int keypair_save(keypair const *keys, char * filename) {
 	return 0;
 }
 
-int keypair_load(keypair *keys, char * filename) {
+int keypair_load(keypair *keys, char const *filename) {
 	int r;
 	FILE *f;
-	if (!filename) return 1;
+	if (!filename || !keys) return 1;
 	f = fopen(filename, "rb");
 	if (!f) return 2;
 	r = fread(keys, sizeof(keypair), 1, f);
