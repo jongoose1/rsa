@@ -4,11 +4,29 @@
 #include <stdint.h>
 #include <stddef.h>
 
+/*
+Number of 4 byte words in a bignum
+128 -> 2048 bit modulus
+256 -> 4096 bit modulus
+512 -> 8192 bit modulus
+1024 -> 16384 bit modulus
+*/
+#define NWORDS 128
+
+/* Number of 4 byte words used in padding */
+#define NPADDING (NWORDS/128)
+
+/* Size in bytes of each ciphertext message */
+#define CSIZE (NWORDS*2)
+
+/* Maximum size in bytes of each plaintext message */
+#define MSIZE (CSIZE - 4 - NPADDING*4)
+
 typedef uint64_t u64;
 typedef uint32_t u32;
 
 typedef struct bignum {
-	u32 a[128]; /* a[0] is LEAST SIGNIFICANT, a[127] is MOST SIGNIFICANT */
+	u32 a[NWORDS]; /* a[0] is LEAST SIGNIFICANT, a[NWORDS-1] is MOST SIGNIFICANT */
 	int sign;   /* zero = positive, non-zero = negative */
 } bignum;
 
@@ -41,6 +59,7 @@ bignum bignum_mod_exp(bignum const *b, bignum const *e, bignum const *m);
 bignum bignum_gcd(bignum const *a, bignum const *b);
 bignum bignum_lcm(bignum const *a, bignum const *b);
 int bignum_print(bignum const *a);
+int bignum_pad(bignum * m);
 int bignum_reduce(bignum *a, bignum const *m);
 int bignum_is_eq(bignum const *a, bignum const *b);
 int bignum_is_lt(bignum const *l, bignum const *r);
@@ -57,8 +76,12 @@ int inplace_encrypt(bignum * m, public_key const *pk);
 bignum encrypt(bignum const *m, public_key const *pk);
 int inplace_decrypt(bignum * m, keypair const *kp);
 bignum decrypt(bignum const *m, keypair const *kp);
+int encrypt_file(char const *fplainname, char const *fciphername, public_key const *pk);
+int decrypt_file(char const *fciphername, keypair const *kp);
 int keypair_save(keypair const *keys, char const *filename);
 int keypair_load(keypair *keys, char const *filename);
+int public_key_save(public_key const *pk, char const *filename);
+int public_key_load(public_key *pk, char const *filename);
 int keypair_print(keypair const *keys);
 keypair keygen(void);
 

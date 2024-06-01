@@ -1,6 +1,6 @@
 OUTS := mod_exp_test miller_rabin_test gcd_test mod_test prime_finder div_test \
 lcm_test bezout_test prime_tester incremental_prime_finder test io_test \
-keygen_test encrypt_test
+keygen_test encrypt_test encrypt decrypt
 DEPS := rsa
 CC := gcc
 CFLAGS := -O3 -flto -ansi -Wall
@@ -25,6 +25,8 @@ test.x: rsa.o
 io_test.x: rsa.o
 keygen_test.x: rsa.o
 encrypt_test.x: rsa.o
+encrypt.x: rsa.o
+decrypt.x: rsa.o
 
 $(addsuffix .x, $(OUTS)): %.x: %.o
 

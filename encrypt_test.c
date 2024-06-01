@@ -1,7 +1,10 @@
 #include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
 #include "rsa.h"
 
 int main(void) {
+	srand(time(NULL));
 	keypair keys;
 	keypair_load(&keys, "mykeys.kp");
 	keypair_print(&keys);
