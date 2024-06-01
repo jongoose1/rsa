@@ -1,6 +1,6 @@
 OUTS := mod_exp_test miller_rabin_test gcd_test mod_test prime_finder div_test \
 lcm_test bezout_test prime_tester incremental_prime_finder test io_test \
-keygen_test encrypt_test encrypt decrypt
+encrypt_test encrypt decrypt keygen
 DEPS := rsa
 CC := gcc
 CFLAGS := -O3 -flto -ansi -Wall
@@ -23,7 +23,7 @@ gcd_test.x: rsa.o
 miller_rabin_test.x: rsa.o
 test.x: rsa.o
 io_test.x: rsa.o
-keygen_test.x: rsa.o
+keygen.x: rsa.o
 encrypt_test.x: rsa.o
 encrypt.x: rsa.o
 decrypt.x: rsa.o

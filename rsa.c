@@ -1,6 +1,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
+#include <sys/types.h>
 #include "rsa.h"
 
 /* Begin helper functions. */
@@ -540,26 +542,45 @@ bignum decrypt(bignum const *m, keypair const *kp) {
 int encrypt_file(char const *fplainname, char const *fciphername, public_key const *pk) {
 	FILE *fplain, *fcipher;
 	char buffer[11] = "cipher.txt";
+	bignum m;
+	u32 chunks = 0;
 	if(!fplainname || !pk || bignum_is_zero(&pk->n) || strlen(fplainname) + 1 > MSIZE) return 1;
 	fplain = fopen(fplainname, "rb");
 	if (!fplain) return 1;
 	if (!fciphername) fciphername = buffer;
 	fcipher = fopen(fciphername, "wb");
 	if (!fcipher) return 1;
-	
-	bignum m = bignum_zero();
+
+	/* Metadata. 0 placeholder. */
+	m = bignum_zero();
+	if (fwrite(&m, CSIZE, 1, fcipher) != 1) return 1;
+	chunks++;
+
+	/* Filename. */
+	m = bignum_zero();
 	memcpy(m.a, fplainname, strlen(fplainname) + 1);
 	inplace_encrypt(&m, pk);
 	if (fwrite(m.a, CSIZE, 1, fcipher) != 1) return 1;
+	chunks++;
 
-	size_t bytes_read;
+	/* Data. */
+	u32 bytes_read;
 	do {
 		m = bignum_zero();
 		bytes_read = fread(m.a, 1, MSIZE, fplain);
 		inplace_encrypt(&m, pk);
 		if (fwrite(m.a, CSIZE, 1, fcipher) != 1) return 1;
+		chunks++;
 	} while (bytes_read == MSIZE);
-	
+
+	/* Go back and write metadata. */
+	m = bignum_zero();
+	m.a[0] = chunks;
+	m.a[1] = bytes_read;
+	inplace_encrypt(&m, pk);
+	fseek(fcipher, 0, SEEK_SET);
+	if (fwrite(m.a, CSIZE, 1, fcipher) != 1) return 1;
+
 	fclose(fplain);
 	fclose(fcipher);
 	return 0;
@@ -567,25 +588,42 @@ int encrypt_file(char const *fplainname, char const *fciphername, public_key con
 
 int decrypt_file(char const *fciphername, keypair const *kp) {
 	FILE *fplain, *fcipher;
+	bignum c;
 	if (!fciphername || !kp || bignum_is_zero(&kp->pk.n)) return 1;
 	fcipher = fopen(fciphername, "rb");
 	if (!fcipher) return 1;
+	
+	/* Metadata. */
+	c = bignum_zero();
+	if (fread(c.a, CSIZE, 1, fcipher) != 1) return 1;
+	inplace_decrypt(&c, kp);
+	u32 remaining_chunks = c.a[0] - 1;
+	u32 last_chunk_size = c.a[1];
 
-	bignum m = bignum_zero();
-	if (fread(m.a, CSIZE, 1, fcipher) != 1) return 1;
-	inplace_decrypt(&m, kp);
-	fplain = fopen ((char *) m.a, "wb");
+	/* Filename. */
+	c = bignum_zero();
+	if (fread(c.a, CSIZE, 1, fcipher) != 1) return 1;
+	remaining_chunks--;
+	inplace_decrypt(&c, kp);
+	fplain = fopen ((char *) c.a, "wb");
 	if (!fplain) return 1;
 
-	m = bignum_zero();
-	while (fread(m.a, CSIZE, 1, fcipher) == 1) {
-		inplace_decrypt(&m, kp);
-		if (fwrite(m.a, MSIZE, 1, fplain) != 1) return 1;
-		m = bignum_zero();
+	/* Data. */
+	c = bignum_zero();
+	while (fread(c.a, CSIZE, 1, fcipher) == 1) {
+		remaining_chunks--;
+		inplace_decrypt(&c, kp);
+		if (remaining_chunks > 0) {
+			if (fwrite(c.a, MSIZE, 1, fplain) != 1) return 1;
+		} else {
+			if (fwrite(c.a, last_chunk_size, 1, fplain) != 1) return 1;
+		}
+		c = bignum_zero();
 	}
-
+	
 	fclose(fplain);
 	fclose(fcipher);
+
 	return 0;
 }
 
