@@ -1,9 +1,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <unistd.h>
-#include <sys/types.h>
 #include "rsa.h"
+#include <assert.h>
 
 /* Begin helper functions. */
 
@@ -51,9 +50,8 @@ int simple_inplace_sub(bignum * b, int i, u32 u) {
 
 int inplace_sub(bignum * a, bignum const *b) {
 	/* a = a - b */
-	/* a and b non-negative */
+	/* |a| >= |b| */
 	if(!a || !b) return 1;
-	if(bignum_is_gt(b, a)) return 1;
 	int i;
 	for (i = 0; i < NWORDS; i++) simple_inplace_sub(a, i, b->a[i]);
 	return 0;
@@ -72,6 +70,17 @@ bignum sub(bignum const *a, bignum const *b, int sign) {
 	/* r = |a| - |b| */
 	/* sign(r) = sign */
 	/* prereq: |a| >= |b| */
+	
+	/* remove*/
+	printf("IN SUB()\n");
+	bignum_print(a);
+	bignum_print(b);
+	bignum a_copy = *a;
+	bignum b_copy = *b;
+	a_copy.sign = 0;
+	b_copy.sign = 0;
+	assert(bignum_is_gte(&a_copy, &b_copy)); 
+
 	if(!a || !b) return bignum_zero();
 	bignum r = *a;
 	inplace_sub(&r, b);
@@ -147,14 +156,21 @@ int bignum_is_gt(bignum const *l, bignum const *r) {
 	if (bignum_is_eq(l, r)) return 0;
 	if (l->sign && !r->sign) return 0;
 	if (!l->sign && r->sign) return 1;
+	if (l->sign && r->sign) {
+		bignum minus_l = *l;
+		bignum minus_r = *r;
+		minus_l.sign = 0;
+		minus_r.sign = 0;
+		return bignum_is_lt(&minus_l, &minus_r);
+	}
 	
-	/* Same sign. */
+	/* Both positive. */
 	int i;
 	for(i = NWORDS-1; i >= 0; i--) {
-		if(l->a[i] < r->a[i]) return l->sign;
-		if(l->a[i] > r->a[i]) return !l->sign;
+		if(l->a[i] < r->a[i]) return 0;
+		if(l->a[i] > r->a[i]) return 1;
 	}
-	return l->sign;
+	return 0;
 }
 
 int bignum_is_gte(bignum const *l, bignum const *r) {
@@ -192,11 +208,20 @@ bignum bignum_sub(bignum const *a, bignum const *b) {
 	} else if (a->sign && !b->sign) {
 		return add(a, b, 1);
 	} else {
+		printf("HERER!!!!!\n\n\n");
+		printf("a:\n");
+		bignum_print(a);
+		printf("b:\n");
+		bignum_print(b);
+		printf("a > b ?? %d\n", bignum_is_gt(a, b));
+		/* -1 - -7 */
 		return bignum_is_gt(a, b)?sub(b, a, 0):sub(a, b, 1);
 	}
 }
 
 bignum bignum_add(bignum const *a, bignum const *b) {
+	/* r = a + b */
+	/* a + b = a - (-b) */
 	bignum b2 = *b;
 	b2.sign = !b2.sign;
 	return bignum_sub(a, &b2); 
@@ -477,8 +502,6 @@ keypair keygen(void) {
 	n_minimum.a[NWORDS/2 - 1] = 1;
 
 	n = bignum_zero();
-
-	
 	while (bignum_is_lt(&n, &n_minimum)) {
 		/* Choose two large prime numbers p and q. */
 		p = random_large_probable_prime(10);
@@ -489,16 +512,39 @@ keypair keygen(void) {
 	}
 
 	/* Compute lambda(n) = lcm(p - 1, q - 1) */
-	inplace_sub(&p, &one);
-	inplace_sub(&q, &one);
+	p = bignum_sub(&p, &one);
+	q = bignum_sub(&q, &one);
 	lambda = bignum_lcm(&p, &q);
 
 	/* Choodean integer e such that 1 < e < lambda(n) and gcd (e, lambda(n)) = 1 */
 	bignum const e = bignum_small(65537);
+	bignum gcd = bignum_gcd(&e, &lambda);
+	assert(bignum_is_eq(&gcd, &one));
 
 	/* Determine d as the multiplicative inverse of e mod lambda(n) */
 	bignum d, c;
 	bezout_coefficients(&e, &lambda, &d, &c);
+	if (d.sign) {
+		printf("D NEGATIVE\n");
+		bignum_print(&d);
+		d.sign = 0;
+		bignum_reduce(&d, &lambda);
+		d.sign = 1;
+		printf("After reduce:\n");
+		bignum_print(&d);
+		d = bignum_add(&d, &lambda);
+		printf("After add:\n");
+		bignum_print(&d);
+	}
+	assert(d.sign == 0);
+	/* Check your work. ed mod lambda = 1 */
+	bignum r = bignum_mul(&e, &d);
+	bignum_reduce(&r, &lambda);
+	bignum_print(&e);
+	bignum_print(&d);
+	bignum_print(&lambda);
+	bignum_print(&r);
+	assert(bignum_is_eq(&r, &one));
 
 	keypair keys;
 	keys.pk.e = e;
@@ -509,7 +555,8 @@ keypair keygen(void) {
 
 int bignum_pad(bignum * m) {
 	int i;
-	for (i = NWORDS/2 - 1 - NPADDING; i < NWORDS/2 - 1; i++) m->a[i] = rand();
+	if (NPADDING == 0) return 0;
+	for (i = MSIZE/4; i < CSIZE/4 - 1; i++) m->a[i] = rand();
 	return 0;
 }
 
@@ -556,8 +603,9 @@ int encrypt_file(char const *fplainname, char const *fciphername, public_key con
 	if (fwrite(&m, CSIZE, 1, fcipher) != 1) return 1;
 	chunks++;
 
-	/* Filename. */
+	/* Filename. Must fit into one chunk. */
 	m = bignum_zero();
+	if (strlen(fplainname) + 1 > MSIZE) return 1; 
 	memcpy(m.a, fplainname, strlen(fplainname) + 1);
 	inplace_encrypt(&m, pk);
 	if (fwrite(m.a, CSIZE, 1, fcipher) != 1) return 1;
@@ -686,7 +734,6 @@ int keypair_print(keypair const *keys) {
 	bignum_print(&keys->pk.e);
 	printf("n:\n");
 	bignum_print(&keys->pk.n);
-	printf("\n");
 	printf("Private Key:\n");
 	printf("d:\n");
 	bignum_print(&keys->sk.d);

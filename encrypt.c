@@ -30,9 +30,9 @@ int main(int argc, char **argv) {
 	found_plaintext = 0;
 	looking_ciphertext = 0;
 	custom_output = 0;
-	fplainname = NULL;
-	fkeyname = NULL;
-	fciphername = NULL;
+	fplainname = 0;
+	fkeyname = 0;
+	fciphername = 0;
 	for(i = 1; i < argc; i++) {
 		if (strcmp(argv[i], "--help") == 0) {
 			print_usage(argv[0]);

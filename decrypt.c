@@ -24,8 +24,8 @@ int main(int argc, char **argv) {
 	int i, found_ciphertext;
 	char *fciphername, *fkeyname;
 	found_ciphertext = 0;
-	fciphername = NULL;
-	fkeyname = NULL;
+	fciphername = 0;
+	fkeyname = 0;
 	for(i = 1; i < argc; i++) {
 		if (strcmp(argv[i], "--help") == 0) {
 			print_usage(argv[0]);

@@ -1,4 +1,6 @@
 #include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
 #include "rsa.h"
 
 int print_usage(char * exe) {
@@ -7,6 +9,7 @@ int print_usage(char * exe) {
 }
 
 int main(int argc, char ** argv) {
+	srand(time(0));
 	if (argc < 2) {
 		printf("Too few arguments.\n");
 		print_usage(argv[0]);

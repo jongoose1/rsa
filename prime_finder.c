@@ -5,7 +5,7 @@
 #include "rsa.h"
 
 int main(void) {
-	srand(time(NULL));
+	srand(time(0));
 	bignum c = random_large_probable_prime(1);
 	bignum_print(&c);
 	return 0;
