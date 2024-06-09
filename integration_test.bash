@@ -4,12 +4,7 @@
 rm plain.txt cipher.txt plain_copy.txt
 
 # Generate keys.
-if ! test -f keys.kp; then
-	(while sleep 60; do echo "[$(date)] Generating Keys..."; done) &
-	PID=$!
-	./keygen.x keys.kp
-	kill $PID
-fi
+./keygen keys.kp
 
 # Create plaintext.
 echo "Hello, nobody!" > plain.txt
@@ -18,7 +13,7 @@ echo "Plaintext:"
 cat plain.txt
 
 # Encrypt.
-./encrypt.x plain.txt -kp keys.kp -o cipher.txt
+./encrypt plain.txt -kp keys.kp -o cipher.txt
 echo "Ciphertext:"
 hexdump -x cipher.txt
 
@@ -26,7 +21,7 @@ hexdump -x cipher.txt
 rm plain.txt
 
 #Decrypt
-./decrypt.x cipher.txt keys.kp
+./decrypt cipher.txt keys.kp
 echo "Plaintext:"
 cat plain.txt
 
