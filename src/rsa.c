@@ -1,8 +1,8 @@
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
-#include "rsa.h"
 #include <assert.h>
+#include "rsa.h"
 
 /* Begin helper functions. */
 
