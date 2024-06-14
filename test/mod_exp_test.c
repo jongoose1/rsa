@@ -1,6 +1,5 @@
-#include <stdint.h>
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include "../src/rsa.h"
 
 /* Try 421^1041243 mod 1092 = 1009 (0x3F1) */
