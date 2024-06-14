@@ -70,16 +70,6 @@ bignum sub(bignum const *a, bignum const *b, int sign) {
 	/* r = |a| - |b| */
 	/* sign(r) = sign */
 	/* prereq: |a| >= |b| */
-	
-	/* remove*/
-	printf("IN SUB()\n");
-	bignum_print(a);
-	bignum_print(b);
-	bignum a_copy = *a;
-	bignum b_copy = *b;
-	a_copy.sign = 0;
-	b_copy.sign = 0;
-	assert(bignum_is_gte(&a_copy, &b_copy)); 
 
 	if(!a || !b) return bignum_zero();
 	bignum r = *a;
@@ -208,13 +198,6 @@ bignum bignum_sub(bignum const *a, bignum const *b) {
 	} else if (a->sign && !b->sign) {
 		return add(a, b, 1);
 	} else {
-		printf("HERER!!!!!\n\n\n");
-		printf("a:\n");
-		bignum_print(a);
-		printf("b:\n");
-		bignum_print(b);
-		printf("a > b ?? %d\n", bignum_is_gt(a, b));
-		/* -1 - -7 */
 		return bignum_is_gt(a, b)?sub(b, a, 0):sub(a, b, 1);
 	}
 }
@@ -461,7 +444,7 @@ bignum random_large_probable_prime(int n) {
 				tests_failed++;
 
 				bignum_print(&candidate);
-				printf("is probabely prime.\n");
+				printf("is probably prime.\n");
 			}
 		}
 	}
@@ -525,26 +508,11 @@ keypair keygen(void) {
 	bignum d, c;
 	bezout_coefficients(&e, &lambda, &d, &c);
 	if (d.sign) {
-		printf("D NEGATIVE\n");
-		bignum_print(&d);
 		d.sign = 0;
 		bignum_reduce(&d, &lambda);
 		d.sign = 1;
-		printf("After reduce:\n");
-		bignum_print(&d);
 		d = bignum_add(&d, &lambda);
-		printf("After add:\n");
-		bignum_print(&d);
 	}
-	assert(d.sign == 0);
-	/* Check your work. ed mod lambda = 1 */
-	bignum r = bignum_mul(&e, &d);
-	bignum_reduce(&r, &lambda);
-	bignum_print(&e);
-	bignum_print(&d);
-	bignum_print(&lambda);
-	bignum_print(&r);
-	assert(bignum_is_eq(&r, &one));
 
 	keypair keys;
 	keys.pk.e = e;

@@ -1,7 +1,7 @@
 #!/bin/bash
 
-#Delete old files.
-rm plain.txt cipher.txt plain_copy.txt
+# Make.
+make keygen encrypt decrypt
 
 # Generate keys.
 ./keygen keys.kp
@@ -20,10 +20,13 @@ hexdump -x cipher.txt
 # Delete plaintext.
 rm plain.txt
 
-#Decrypt
+#Decrypt.
 ./decrypt cipher.txt keys.kp
 echo "Plaintext:"
 cat plain.txt
 
-#Comparing
+#Compare.
 diff plain.txt plain_copy.txt
+
+#Delete old files.
+rm plain.txt cipher.txt plain_copy.txt keys.kp

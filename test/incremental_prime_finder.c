@@ -1,7 +1,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include "rsa.h"
+#include "../src/rsa.h"
 #include <time.h>
 
 /* Try starting at 48 with 2 tests.. */

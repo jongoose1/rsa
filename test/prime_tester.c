@@ -1,7 +1,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include "rsa.h"
+#include "../src/rsa.h"
 #include <time.h>
 
 /* Try 9737333 is prime and fails 10 composite tests. */

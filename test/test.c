@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include "rsa.h"
+#include "../src/rsa.h"
 
 int main(int argc, char ** argv) {
 	bignum a, b, gcd, lcm, product, sum, difference, mod, quotient, gcd_result,

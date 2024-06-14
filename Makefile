@@ -1,54 +1,52 @@
 #janky ass makefile
 
-OUTS := mod_exp_test miller_rabin_test gcd_test mod_test prime_finder div_test \
+TESTS := mod_exp_test miller_rabin_test gcd_test mod_test prime_finder div_test \
 lcm_test bezout_test prime_tester incremental_prime_finder test io_test \
-encrypt_test encrypt decrypt keygen
-DEPS := rsa
-CC := gcc
+encrypt_test
+OUTS := encrypt decrypt keygen
 INSTALLDIR := ~/bin
-CFLAGS := -ansi -Wall
-LDFLAGS := -Wall
-RM := rm -f
 
 .PHONY: all
-all: debug release $(OUTS)
+all: debug release test $(OUTS)
 
 .PHONY: debug
-debug: $(addprefix debug/bin/, $(addsuffix .x, $(OUTS)))
-$(addprefix debug/bin/, $(addsuffix .x, $(OUTS))): debug/bin/%.x: debug/obj/%.o debug/obj/rsa.o
-debug/bin/%.x: debug/obj/%.o
-	$(CC) $(LDFLAGS) $^ -o $@
-$(addprefix debug/obj/, $(addsuffix .o, $(DEPS))): debug/obj/%.o: src/%.h
-debug/obj/%.o: src/%.c | ddirs
-	$(CC) $(CFLAGS) -g -c $< -o $@
-.PHONY: ddirs
-ddirs:
+debug: $(addprefix debug/, $(addsuffix .x, $(OUTS)))
+debug/%.x: debug/%.o debug/rsa.o
+	gcc -Wall $^ -o $@
+debug/rsa.o: src/rsa.h
+debug/%.o: src/%.c | ddir
+	gcc -ansi -Wall -g -c $< -o $@
+.PHONY: ddir
+ddir:
 	mkdir -p debug
-	mkdir -p debug/bin
-	mkdir -p debug/obj
 
 .PHONY: release
-release: $(addprefix release/bin/, $(addsuffix .x, $(OUTS)))
-$(addprefix release/bin/, $(addsuffix .x, $(OUTS))): release/bin/%.x: release/obj/%.o release/obj/rsa.o
-release/bin/%.x: release/obj/%.o
-	$(CC) $(LDFLAGS) -O3 -flto -DNDEBUG $^ -o $@
-$(addprefix release/obj/, $(addsuffix .o, $(DEPS))): release/obj/%.o: src/%.h
-release/obj/%.o: src/%.c | rdirs
-	$(CC) $(CFLAGS) -O3 -flto -c $< -o $@
-.PHONY: rdirs
-rdirs:
+release: $(addprefix release/, $(addsuffix .x, $(OUTS)))
+release/%.x: release/%.o release/rsa.o
+	gcc -Wall -O3 -flto $^ -o $@
+release/rsa.o: src/rsa.h
+release/%.o: src/%.c | rdir
+	gcc -ansi -w -DNDEBUG -O3 -flto -c $< -o $@
+.PHONY: rdir
+rdir:
 	mkdir -p release
-	mkdir -p release/bin
-	mkdir -p release/obj
 
-$(OUTS): %: release/bin/%.x
+.PHONY: test
+test: $(addprefix test/, $(addsuffix .x, $(TESTS)))
+test/%.x: test/%.o debug/rsa.o
+	gcc -Wall $^ -o $@
+test/%.o: test/%.c
+	gcc -ansi -Wall -g -c $< -o $@
+
+$(OUTS): %: release/%.x
 	cp $< $@
 
 .PHONY: clean
 clean:
-	$(RM) -r debug
-	$(RM) -r release
-	$(RM) $(OUTS)
+	rm -rf debug
+	rm -rf release
+	rm -f $(OUTS)
+	rm -f test/*.x
 
 .PHONY: install
 install: $(OUTS)
@@ -57,4 +55,4 @@ install: $(OUTS)
 
 .PHONY: uninstall
 uninstall:
-	$(RM) $(addprefix $(INSTALLDIR)/, $(OUTS))
+	rm -f $(addprefix $(INSTALLDIR)/, $(OUTS))

@@ -1,7 +1,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include "rsa.h"
+#include "../src/rsa.h"
 
 /* Try 221 is composite with 137 as a witness. */
 

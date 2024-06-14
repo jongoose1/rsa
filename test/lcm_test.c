@@ -1,9 +1,9 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include "rsa.h"
+#include "../src/rsa.h"
 
-/* Try gcd(4444, 888811) = 11 */
+/* Try lcm(23, 78) = 1794 (0x702) */
 
 int main(int argc, char ** argv) {
 
@@ -15,7 +15,7 @@ int main(int argc, char ** argv) {
 	bignum a = bignum_small(atoi(argv[1]));
 	bignum b = bignum_small(atoi(argv[2]));
 
-	bignum c = bignum_gcd(&a, &b);
+	bignum c = bignum_lcm(&a, &b);
 	bignum_print(&c);
 
 	return 0;

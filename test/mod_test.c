@@ -1,7 +1,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include "rsa.h"
+#include "../src/rsa.h"
 
 /* Try 99 % 5 = 4 */
 

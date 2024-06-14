@@ -1,9 +1,9 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include "rsa.h"
+#include "../src/rsa.h"
 
-/* Try 240 and 46. -9*240 + 47*46 = 2 */
+/* Try gcd(4444, 888811) = 11 */
 
 int main(int argc, char ** argv) {
 
@@ -14,11 +14,9 @@ int main(int argc, char ** argv) {
 
 	bignum a = bignum_small(atoi(argv[1]));
 	bignum b = bignum_small(atoi(argv[2]));
-	bignum x, y;
 
-	bezout_coefficients(&a, &b, &x, &y);
-	bignum_print(&x);
-	bignum_print(&y);
+	bignum c = bignum_gcd(&a, &b);
+	bignum_print(&c);
 
 	return 0;
 }

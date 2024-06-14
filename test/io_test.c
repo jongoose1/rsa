@@ -1,4 +1,4 @@
-#include "rsa.h"
+#include "../src/rsa.h"
 
 int main(void) {
 	keypair keys, keys2;
