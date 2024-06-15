@@ -1,8 +1,3 @@
-#janky ass makefile
-
-TESTS := mod_exp_test miller_rabin_test gcd_test mod_test prime_finder div_test \
-lcm_test bezout_test prime_tester incremental_prime_finder test io_test \
-encrypt_test
 OUTS := encrypt decrypt keygen
 INSTALLDIR := ~/bin
 
@@ -32,7 +27,7 @@ rdir:
 	mkdir -p release
 
 .PHONY: test
-test: $(addprefix test/, $(addsuffix .x, $(TESTS)))
+test: $(addsuffix .x, $(basename $(wildcard test/*.c)))
 test/%.x: test/%.o debug/rsa.o
 	gcc -Wall $^ -o $@
 test/%.o: test/%.c

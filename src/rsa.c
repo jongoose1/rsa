@@ -107,6 +107,20 @@ bignum add(bignum const *a, bignum const *b, int sign) {
 	return r;
 }
 
+
+int last_one_bit(bignum const *a) {
+	/* e.g. 0x00023199 returns 17 */
+	int r = NWORDS * 32 - 1;
+
+	for (r = NWORDS *32 - 1; r > 0; r = r - 32) {
+		if (a->a[r/32] != 0) {
+			while ((a->a[r/32] & (1 << (r%32))) == 0) r = r - 1;
+			return r;
+		}
+	}
+	return -1;
+}
+
 /* End helper functions. */
 
 /* O(log(n)) */
@@ -315,23 +329,17 @@ bignum bignum_div(bignum const *a, bignum const *m, bignum * r) {
 		*r = bignum_zero();
 		return bignum_small(1);
 	}
-	
-	bignum r_deref, q, scratch;
+	bignum r_deref, q;
 	q = bignum_zero();
-	scratch = *a;
-
 	if (!r) r = &r_deref; /* Discard remainder. */
-
 	*r = bignum_zero();
-
 	if (bignum_is_eq(a, m)) return bignum_small(1);
-
 	/* long division */
 	int i;
-	for(i = 0; i < NWORDS*32; i++) {
+	for(i = last_one_bit(a); i >= 0; i--) {
 		bit_shift_left(r);
 		bit_shift_left(&q);
-		r->a[0] = r->a[0] + bit_shift_left(&scratch);
+		r->a[0] = r->a[0] + ((a->a[i/32] >> (i%32)) & 1);
 		if(bignum_is_gte(r, m)) {
 			inplace_sub(r, m);
 			q.a[0] = q.a[0] + 1;
@@ -367,14 +375,11 @@ int bignum_reduce(bignum *a, bignum const *m) {
 bignum bignum_mod_exp(bignum const *b, bignum const *e, bignum const *m) {
 	/* b^e mod m */
 	if (bignum_is_zero(e)) return bignum_small(1);
-
 	int i;
 	bignum r, scratch, e_copy;
-
 	r = bignum_small(1);
 	scratch = bignum_mod(b, m);
 	e_copy = *e;
-
 	for(i = 0; i < NWORDS*32; i++) {
 		if (bignum_is_zero(&e_copy)) return r;
 		if (e_copy.a[0] & 1) {
@@ -402,16 +407,13 @@ int miller_rabin(bignum const * n, bignum const * a) {
 	/* return -1: invalid n */
 	/* return -2: invalid a */
 	/* n = candidate, a = witness */
-
 	int i, k;
 	bignum const three = bignum_small(3);
 	bignum const one = bignum_small(1);
 	bignum b = bignum_mod(a, n);
-
 	/* Input invalid if n|a or n<3. */
 	if (bignum_is_lt(n, &three)) return -1;
 	if (bignum_is_zero(&b)) return -2;
-	
 	/* Write n-1 = q*2^k, with q odd */
 	bignum q = *n;
 	inplace_sub(&q, &one);
@@ -421,10 +423,8 @@ int miller_rabin(bignum const * n, bignum const * a) {
 		bit_shift_right(&q);
 		k++;
 	}
-
 	b = bignum_mod_exp(&b, &q, n);
 	if (bignum_is_one(&b)) return 1;
-
 	for (i = 0; i < k; i++) {
 		if (bignum_is_eq(&b, &negative_one)) return 1;
 		b = bignum_mul(&b, &b);
