@@ -52,23 +52,34 @@ int simple_inplace_sub(bignum * b, int i, u32 u) {
 	return borrow?simple_inplace_sub(b, i+1, 1):0;
 }
 
-/* O(log^2(n)) */
+/* O(log(n)) */
 int inplace_sub(bignum * a, bignum const *b) {
 	/* a = a - b */
 	/* |a| >= |b| */
 	if(!a || !b) return 1;
 	int i;
-	for (i = 0; i < NWORDS; i++) simple_inplace_sub(a, i, b->a[i]);
+	u32 borrow = 0;
+	u32 next_borrow;
+	for (i = 0; i < NWORDS; i++) {
+		next_borrow = ((borrow && a->a[i] == 0) || (a->a[i] - borrow < b->a[i]))?1:0;
+		a->a[i] = a->a[i] - b->a[i] - borrow;
+		borrow = next_borrow;
+	}
 	return 0;
 }
 
-/* O(log^2(n)) */
+/* O(log(n)) */
 int inplace_add(bignum *a, bignum const *b) {
 	/* r = a + b */
 	/* a and b non-negative */
 	if (!a || !b) return 1;
 	int i;
-	for (i = 0; i < NWORDS; i++) simple_inplace_add(a, i, b->a[i]); 
+	u64 sum_carry = 0;
+	for (i = 0; i < NWORDS; i++) {
+		sum_carry = sum_carry + a->a[i] + b->a[i];
+		a->a[i] = sum_carry; /* Least significant 32 bits */
+		sum_carry = sum_carry >> 32;
+	}
 	return 0;
 }
 
@@ -85,7 +96,7 @@ bignum sub(bignum const *a, bignum const *b, int sign) {
 	return r;
 }
 
-/* O(log^2(n)) */
+/* O(log(n)) */
 bignum add(bignum const *a, bignum const *b, int sign) {
 	/* r = |a| + |b| */
 	/* sign(r) = sign */
@@ -201,7 +212,7 @@ int bignum_is_odd(bignum const *a) {
 	return a->a[0] % 2 == 1;
 }
 
-/* O(log^2(n)) */
+/* O(log(n)) */
 bignum bignum_sub(bignum const *a, bignum const *b) {
 	/* r = a - b */
 	if (!a || !b) return bignum_zero();
@@ -222,7 +233,7 @@ bignum bignum_sub(bignum const *a, bignum const *b) {
 	}
 }
 
-/* O(log^2(n)) */
+/* O(log(n)) */
 bignum bignum_add(bignum const *a, bignum const *b) {
 	/* r = a + b */
 	/* a + b = a - (-b) */
@@ -231,7 +242,7 @@ bignum bignum_add(bignum const *a, bignum const *b) {
 	return bignum_sub(a, &b2); 
 }
 
-/* O(log^4(n)) */
+/* O(log^3(n)) */
 int bezout_coefficients(bignum const *a, bignum const *b, bignum *x, bignum *y) {
 	if (!a || !b || bignum_is_zero(a) || bignum_is_zero(b)) return 1;
 
@@ -260,28 +271,32 @@ int bezout_coefficients(bignum const *a, bignum const *b, bignum *x, bignum *y) 
 	return 0;
 }
 
-/* O(log^3(n)) */
+/* O(log^2(n)) */
 bignum bignum_mul(bignum const *p, bignum const *q) {
 	int i, j;
 	u32 L, M;
 	u64 x;
-	bignum r;
-
-	r = bignum_zero();
+	bignum leasts;
+	bignum mosts;
+	bignum r = bignum_zero();
 
 	if (!p || !q || bignum_is_zero(p) || bignum_is_zero(q)) return r;
 	if (bignum_is_one(p)) return *q;
 	if (bignum_is_one(q)) return *p;
 
 	for(i = 0; i < NWORDS; i++) {
+		leasts = bignum_zero();
+		mosts = bignum_zero();
 		for(j = 0; j < NWORDS; j++) {
 			if(i + j > NWORDS-1 || p->a[i] == 0 || q->a[j] == 0) continue;
 			x = (u64) p->a[i] * q->a[j];
 			L = x;
 			M = x >> 32;
-			simple_inplace_add(&r, i+j, L);
-			simple_inplace_add(&r, i+j+1, M);
+			leasts.a[i+j] = L;
+			if (i+j+1 < NWORDS) mosts.a[i+j+1] = M;
 		}
+		inplace_add(&r, &leasts);
+		inplace_add(&r, &mosts);
 	}
 	r.sign = (p->sign != q->sign);
 	return r;
@@ -348,7 +363,7 @@ int bignum_reduce(bignum *a, bignum const *m) {
 	return 0;
 }
 
-/* O(log^4(n)) */
+/* O(log^3(n)) */
 bignum bignum_mod_exp(bignum const *b, bignum const *e, bignum const *m) {
 	/* b^e mod m */
 	if (bignum_is_zero(e)) return bignum_small(1);
@@ -377,7 +392,7 @@ bignum bignum_small(u32 x) {
 	return r;
 }
 
-/* O(log^4(n)) */
+/* O(log^3(n)) */
 int miller_rabin(bignum const * n, bignum const * a) {
 	/* return 1: test fails, probably prime. */
 	/* return 0: n composite. */
@@ -448,7 +463,7 @@ bignum bignum_quarter_random(void) {
 ** Generate random 2048 bit probable prime by performing n Miller-Rabin tests
 ** with random bases.
 */
-/* O(log^5(n)) */
+/* O(log^4(n)) */
 bignum random_large_probable_prime(int n) {
 	bignum witness, candidate;
 	/* Note: Failing a Miller-Rabin test indicates a candidate is probably prime. */
@@ -512,7 +527,7 @@ bignum bignum_lcm(bignum const *a, bignum const *b) {
 	return bignum_div(&ab, &gcd, 0);
 }
 
-/* O(log^5(n)) */
+/* O(log^4(n)) */
 keypair keygen(void) {
 	bignum p, q, n, lambda;
 	bignum const one = bignum_small(1);
@@ -564,7 +579,7 @@ int bignum_pad(bignum * m) {
 	return 0;
 }
 
-/* O(log^4(n)) */
+/* O(log^3(n)) */
 int inplace_encrypt(bignum * m, public_key const *pk) {
 	bignum max_message = bignum_zero();
 	max_message.a[MSIZE/4] = 1;
@@ -575,26 +590,26 @@ int inplace_encrypt(bignum * m, public_key const *pk) {
 	return 0;
 }
 
-/* O(log^4(n)) */
+/* O(log^3(n)) */
 bignum encrypt(bignum const *m, public_key const *pk) {
 	bignum r = *m;
 	return inplace_encrypt(&r, pk)?bignum_zero():r;
 }
 
-/* O(log^4(n)) */
+/* O(log^3(n)) */
 int inplace_decrypt(bignum * m, keypair const *kp) {
 	if (!m || !kp || bignum_is_zero(&kp->pk.n)) return 1;
 	*m = bignum_mod_exp(m ,&kp->sk.d, &kp->pk.n);
 	return 0;
 }
 
-/* O(log^4(n)) */
+/* O(log^3(n)) */
 bignum decrypt(bignum const *m, keypair const *kp) {
 	bignum r = *m;
 	return inplace_decrypt(&r, kp)?bignum_zero():r;
 }
 
-/* O(m*log^4(n)) */
+/* O(m*log^3(n)) */
 int encrypt_file(char const *fplainname, char const *fciphername, public_key const *pk) {
 	FILE *fplain, *fcipher;
 	char buffer[11] = "cipher.txt";
@@ -643,7 +658,7 @@ int encrypt_file(char const *fplainname, char const *fciphername, public_key con
 	return 0;
 }
 
-/* O(m*log^4(n)) */
+/* O(m*log^3(n)) */
 int decrypt_file(char const *fciphername, keypair const *kp) {
 	FILE *fplain, *fcipher;
 	bignum c;
