@@ -380,7 +380,7 @@ bignum bignum_mod_exp(bignum const *b, bignum const *e, bignum const *m) {
 	r = bignum_small(1);
 	scratch = bignum_mod(b, m);
 	lob = last_one_bit(e);
-	for(i = 0; i < lob; i++) {
+	for(i = 0; i <= lob; i++) {
 		if (e->a[i/32] & (1 << (i%32))) {
 			r = bignum_mul(&r, &scratch);
 			bignum_reduce(&r, m);
