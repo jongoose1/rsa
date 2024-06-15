@@ -369,18 +369,21 @@ bignum bignum_mod_exp(bignum const *b, bignum const *e, bignum const *m) {
 	if (bignum_is_zero(e)) return bignum_small(1);
 
 	int i;
-	bignum r, scratch;
+	bignum r, scratch, e_copy;
 
 	r = bignum_small(1);
 	scratch = bignum_mod(b, m);
+	e_copy = *e;
 
 	for(i = 0; i < NWORDS*32; i++) {
-		if (e->a[i/32] & (1 << (i%32))) {
+		if (bignum_is_zero(&e_copy)) return r;
+		if (e_copy.a[0] & 1) {
 			r = bignum_mul(&r, &scratch);
 			bignum_reduce(&r, m);
 		}
 		scratch = bignum_mul(&scratch, &scratch);
 		bignum_reduce(&scratch, m);
+		bit_shift_right(&e_copy);
 	}
 	return r;
 }
