@@ -82,6 +82,7 @@ int keypair_load(keypair *keys, char const *filename);
 int public_key_save(public_key const *pk, char const *filename);
 int public_key_load(public_key *pk, char const *filename);
 int keypair_print(keypair const *keys);
+int public_key_print(public_key const *pk);
 keypair keygen(void);
 
 #endif

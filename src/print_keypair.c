@@ -1,6 +1,4 @@
 #include <stdio.h>
-#include <stdlib.h>
-#include <time.h>
 #include "rsa.h"
 
 int print_usage(char * exe) {
@@ -9,7 +7,6 @@ int print_usage(char * exe) {
 }
 
 int main(int argc, char ** argv) {
-	srand(time(0));
 	if (argc < 2) {
 		printf("Too few arguments.\n");
 		print_usage(argv[0]);
@@ -20,7 +17,8 @@ int main(int argc, char ** argv) {
 		print_usage(argv[0]);
 		return 1;
 	}
-	keypair keys = keygen();
+	keypair keys;
+	keypair_load(&keys, argv[1]);
 	keypair_print(&keys);
-	return keypair_save(&keys, argv[1]);
+	return 0;
 }

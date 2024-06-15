@@ -733,13 +733,20 @@ int public_key_load(public_key *pk, char const *filename) {
 /* O(log(n)) */
 int keypair_print(keypair const *keys) {
 	if (!keys) return 1;
-	printf("Public Key:\n");
-	printf("e:\n");
-	bignum_print(&keys->pk.e);
-	printf("n:\n");
-	bignum_print(&keys->pk.n);
+	public_key_print(&keys->pk);
 	printf("Private Key:\n");
 	printf("d:\n");
 	bignum_print(&keys->sk.d);
+	return 0;
+}
+
+/* O(log(n)) */
+int public_key_print(public_key const *pk) {
+	if (!pk) return 1;
+	printf("Public Key:\n");
+	printf("e:\n");
+	bignum_print(&pk->e);
+	printf("n:\n");
+	bignum_print(&pk->n);
 	return 0;
 }
