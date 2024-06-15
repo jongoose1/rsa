@@ -110,8 +110,7 @@ bignum add(bignum const *a, bignum const *b, int sign) {
 
 int last_one_bit(bignum const *a) {
 	/* e.g. 0x00023199 returns 17 */
-	int r = NWORDS * 32 - 1;
-
+	int r;
 	for (r = NWORDS *32 - 1; r > 0; r = r - 32) {
 		if (a->a[r/32] != 0) {
 			while ((a->a[r/32] & (1 << (r%32))) == 0) r = r - 1;
@@ -191,7 +190,6 @@ int bignum_is_gt(bignum const *l, bignum const *r) {
 		minus_r.sign = 0;
 		return bignum_is_lt(&minus_l, &minus_r);
 	}
-	
 	/* Both positive. */
 	int i;
 	for(i = NWORDS-1; i >= 0; i--) {
@@ -259,18 +257,15 @@ bignum bignum_add(bignum const *a, bignum const *b) {
 /* O(log^3(n)) */
 int bezout_coefficients(bignum const *a, bignum const *b, bignum *x, bignum *y) {
 	if (!a || !b || bignum_is_zero(a) || bignum_is_zero(b)) return 1;
-
 	/* Use rotating indices */
 	int i;
 	bignum quotients[3], remainders[3], s[3], t[3], scratch;
-	
 	remainders[0] = *a;
 	remainders[1] = *b;
 	s[0] = bignum_small(1);
 	s[1] = bignum_small(0);
 	t[0] = bignum_small(0);
 	t[1] = bignum_small(1);
-
 	i = 1;
 	do { 
 		i = (i + 1) % 3;
@@ -293,11 +288,9 @@ bignum bignum_mul(bignum const *p, bignum const *q) {
 	bignum leasts;
 	bignum mosts;
 	bignum r = bignum_zero();
-
 	if (!p || !q || bignum_is_zero(p) || bignum_is_zero(q)) return r;
 	if (bignum_is_one(p)) return *q;
 	if (bignum_is_one(q)) return *p;
-
 	for(i = 0; i < NWORDS; i++) {
 		leasts = bignum_zero();
 		mosts = bignum_zero();
@@ -485,12 +478,10 @@ bignum random_large_probable_prime(int n) {
 					bignum_print(&candidate);
 					printf("\n");
 				}
-
 				break;
 			} else if (result == 1) {
 				/* Test Failed. Candidate is probably prime. */
 				tests_failed++;
-
 				bignum_print(&candidate);
 				printf("is probably prime.\n");
 			}
@@ -503,20 +494,17 @@ bignum random_large_probable_prime(int n) {
 bignum bignum_gcd(bignum const *a, bignum const *b) {
 	if (!a || !b || bignum_is_zero(a) || bignum_is_zero(b)) return bignum_small(0);
 	if (bignum_is_one(a) || bignum_is_one(b)) return bignum_small(1);
-
 	bignum r1, r2, *p1, *p2, *temp;
 	r1 = *a;
 	r2 = *b;
 	p1 = &r1;
 	p2 = &r2;
-
 	while (!bignum_is_zero(p2)) {
 		bignum_reduce(p1, p2);
 		temp = p1;
 		p1 = p2;
 		p2 = temp;
 	}
-
 	return *p1;
 }
 
@@ -534,7 +522,6 @@ keypair keygen(void) {
 	bignum const one = bignum_small(1);
 	bignum n_minimum = bignum_zero();
 	n_minimum.a[NWORDS/2 - 1] = 1;
-
 	n = bignum_zero();
 	while (bignum_is_lt(&n, &n_minimum)) {
 		/* Choose two large prime numbers p and q. */
@@ -544,17 +531,14 @@ keypair keygen(void) {
 		/* Compute n = pq. */
 		n = bignum_mul(&p, &q);
 	}
-
 	/* Compute lambda(n) = lcm(p - 1, q - 1) */
 	p = bignum_sub(&p, &one);
 	q = bignum_sub(&q, &one);
 	lambda = bignum_lcm(&p, &q);
-
 	/* Choodean integer e such that 1 < e < lambda(n) and gcd (e, lambda(n)) = 1 */
 	bignum const e = bignum_small(65537);
 	bignum gcd = bignum_gcd(&e, &lambda);
 	assert(bignum_is_eq(&gcd, &one));
-
 	/* Determine d as the multiplicative inverse of e mod lambda(n) */
 	bignum d, c;
 	bezout_coefficients(&e, &lambda, &d, &c);
@@ -564,7 +548,6 @@ keypair keygen(void) {
 		d.sign = 1;
 		d = bignum_add(&d, &lambda);
 	}
-
 	keypair keys;
 	keys.pk.e = e;
 	keys.pk.n = n;
@@ -622,12 +605,10 @@ int encrypt_file(char const *fplainname, char const *fciphername, public_key con
 	if (!fciphername) fciphername = buffer;
 	fcipher = fopen(fciphername, "wb");
 	if (!fcipher) return 1;
-
 	/* Metadata. 0 placeholder. */
 	m = bignum_zero();
 	if (fwrite(&m, CSIZE, 1, fcipher) != 1) return 1;
 	chunks++;
-
 	/* Filename. Must fit into one chunk. */
 	m = bignum_zero();
 	if (strlen(fplainname) + 1 > MSIZE) return 1; 
@@ -635,7 +616,6 @@ int encrypt_file(char const *fplainname, char const *fciphername, public_key con
 	inplace_encrypt(&m, pk);
 	if (fwrite(m.a, CSIZE, 1, fcipher) != 1) return 1;
 	chunks++;
-
 	/* Data. */
 	u32 bytes_read;
 	do {
@@ -645,7 +625,6 @@ int encrypt_file(char const *fplainname, char const *fciphername, public_key con
 		if (fwrite(m.a, CSIZE, 1, fcipher) != 1) return 1;
 		chunks++;
 	} while (bytes_read == MSIZE);
-
 	/* Go back and write metadata. */
 	m = bignum_zero();
 	m.a[0] = chunks;
@@ -653,7 +632,6 @@ int encrypt_file(char const *fplainname, char const *fciphername, public_key con
 	inplace_encrypt(&m, pk);
 	fseek(fcipher, 0, SEEK_SET);
 	if (fwrite(m.a, CSIZE, 1, fcipher) != 1) return 1;
-
 	fclose(fplain);
 	fclose(fcipher);
 	return 0;
@@ -666,14 +644,12 @@ int decrypt_file(char const *fciphername, keypair const *kp) {
 	if (!fciphername || !kp || bignum_is_zero(&kp->pk.n)) return 1;
 	fcipher = fopen(fciphername, "rb");
 	if (!fcipher) return 1;
-	
 	/* Metadata. */
 	c = bignum_zero();
 	if (fread(c.a, CSIZE, 1, fcipher) != 1) return 1;
 	inplace_decrypt(&c, kp);
 	u32 remaining_chunks = c.a[0] - 1;
 	u32 last_chunk_size = c.a[1];
-
 	/* Filename. */
 	c = bignum_zero();
 	if (fread(c.a, CSIZE, 1, fcipher) != 1) return 1;
@@ -681,7 +657,6 @@ int decrypt_file(char const *fciphername, keypair const *kp) {
 	inplace_decrypt(&c, kp);
 	fplain = fopen ((char *) c.a, "wb");
 	if (!fplain) return 1;
-
 	/* Data. */
 	c = bignum_zero();
 	while (fread(c.a, CSIZE, 1, fcipher) == 1) {
@@ -694,10 +669,8 @@ int decrypt_file(char const *fciphername, keypair const *kp) {
 		}
 		c = bignum_zero();
 	}
-	
 	fclose(fplain);
 	fclose(fcipher);
-
 	return 0;
 }
 
