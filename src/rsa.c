@@ -120,6 +120,32 @@ int last_one_bit(bignum const *a) {
 	return -1;
 }
 
+int bignum_quarter_print(bignum const *a){
+	if (!a) return 1;
+	int i, j, k;
+	k = NWORDS/4-1;
+	for(i = 0; i < NWORDS/32; i++ ) {
+		for(j = 0; j < 8; j++) {
+			printf("%08x ",a->a[k--]);
+		}
+		printf("\n");
+	}
+	return 0;
+}
+
+int bignum_half_print(bignum const *a){
+	if (!a) return 1;
+	int i, j, k;
+	k = NWORDS/2-1;
+	for(i = 0; i < NWORDS/16; i++ ) {
+		for(j = 0; j < 8; j++) {
+			printf("%08x ",a->a[k--]);
+		}
+		printf("\n");
+	}
+	return 0;
+}
+
 /* End helper functions. */
 
 /* O(log(n)) */
@@ -453,37 +479,105 @@ bignum bignum_quarter_random(void) {
 	return r;
 }
 
+/* this is a shit way of doing things. */
+static bignum primorial_init() {	
+	bignum primorial = bignum_small(223092870);
+
+#if NWORDS>=128
+	primorial.a[30] = 0x3CB2BBE8;
+	primorial.a[29] = 0x60C95193;
+	primorial.a[28] = 0xAC35C2F7;
+	primorial.a[27] = 0xBC3271E0;
+	primorial.a[26] = 0x45DCC6AE;
+	primorial.a[25] = 0x6BE995BA;
+	primorial.a[24] = 0x7A73E8E7;
+	primorial.a[23] = 0x5FDAFBEB;
+	primorial.a[22] = 0x255C1FA7;
+	primorial.a[21] = 0xFD220A11;
+	primorial.a[20] = 0x35B3D273;
+	primorial.a[19] = 0x3116044E;
+	primorial.a[18] = 0xC1BD8E93;
+	primorial.a[17] = 0x5CFDCA9F;
+	primorial.a[16] = 0xD60AE558;
+	primorial.a[15] = 0x15DA4CDB;
+	primorial.a[14] = 0x25B55FB0;
+	primorial.a[13] = 0xC26BEF47;
+	primorial.a[12] = 0xC9D17E0A;
+	primorial.a[11] = 0x02499251;
+	primorial.a[10] = 0x61AE33AA;
+	primorial.a[9] = 0x43035D90;
+	primorial.a[8] = 0x1EF3041F;
+	primorial.a[7] = 0x962B0C84;
+	primorial.a[6] = 0x412D3D80;
+	primorial.a[5] = 0x34901A62;
+	primorial.a[4] = 0x663664A4;
+	primorial.a[3] = 0x0366DF56;
+	primorial.a[2] = 0x7AB682B6;
+	primorial.a[1] = 0x348ACFCE;
+	primorial.a[0] = 0x775EC712;
+#endif
+	return primorial;
+}
+
 /* 
-** Generate random 2048 bit probable prime by performing n Miller-Rabin tests
+** Generate random NWORDS*8 bit probable prime by performing n Miller-Rabin tests
 ** with random bases.
 */
 /* O(log^4(n)) */
 bignum random_large_probable_prime(int n) {
 	bignum witness, candidate;
+	bignum minimum = bignum_zero();
+	bignum gcd;
+	bignum const one = bignum_small(1);
+	/* A primorial number is a product of the first primes. */
+	/* We can use this number to weed out most of out candidates before having to perform a Miller-Rabin test. */
+	bignum const primorial = primorial_init();
+
+	/* sqrt(2) */
+	/* Use this as a minimum so that n = pq is at least NWORDS*16 bits long. */
+	minimum.a[NWORDS/4-1] = 0xB504F000;
+
+
 	/* Note: Failing a Miller-Rabin test indicates a candidate is probably prime. */
 	int tests_failed = 0;
 	int number_candidates = 0;
 	while (tests_failed < n) {
-		candidate = bignum_quarter_random();
+		
+		/* Find an appropriate candidate. */
+		while (1) {
+			candidate = bignum_quarter_random();
+			
+			/* set most significant bit to one, so more likely to meet minimum. */ 
+			candidate.a[NWORDS/4 - 1] = candidate.a[NWORDS/4 -1] | (1 << 31);
+			if (bignum_is_lt(&candidate, &minimum)) continue;
+
+			/* set least significant bit to one, so more likely to be prime. */
+			candidate.a[0] = candidate.a[0] | 1;
+			gcd = bignum_gcd(&candidate, &primorial);
+			if (bignum_is_eq(&gcd, &one)) break;
+		}
 		number_candidates++;
+
 		tests_failed = 0;
 		while (tests_failed < n) {
 			witness = bignum_random();
+			bignum_reduce(&witness, &candidate);
 			int result = miller_rabin(&candidate, &witness);
 			if (result == -1 || result == 0) { 
 				/* Invalid candidate or candidate is composite. */
 				if (result == 0) { 
-					bignum_print(&witness);
+					bignum_quarter_print(&witness);
 					printf("is a Miller-Rabin witness for the compositeness of candidate #%d:\n", number_candidates);
-					bignum_print(&candidate);
+					bignum_quarter_print(&candidate);
 					printf("\n");
 				}
 				break;
 			} else if (result == 1) {
 				/* Test Failed. Candidate is probably prime. */
 				tests_failed++;
-				bignum_print(&candidate);
-				printf("is probably prime.\n");
+				printf("Candidate #%d:\n", number_candidates);
+				bignum_quarter_print(&candidate);
+				printf("failed test #%d and is probably prime.\n\n", tests_failed);
 			}
 		}
 	}
@@ -521,7 +615,7 @@ keypair keygen(void) {
 	bignum p, q, n, lambda;
 	bignum const one = bignum_small(1);
 	bignum n_minimum = bignum_zero();
-	n_minimum.a[NWORDS/2 - 1] = 1;
+	n_minimum.a[NWORDS/2 - 1] = 1 << 31;
 	n = bignum_zero();
 	while (bignum_is_lt(&n, &n_minimum)) {
 		/* Choose two large prime numbers p and q. */
@@ -736,7 +830,7 @@ int keypair_print(keypair const *keys) {
 	public_key_print(&keys->pk);
 	printf("Private Key:\n");
 	printf("d:\n");
-	bignum_print(&keys->sk.d);
+	bignum_half_print(&keys->sk.d);
 	return 0;
 }
 
@@ -745,8 +839,8 @@ int public_key_print(public_key const *pk) {
 	if (!pk) return 1;
 	printf("Public Key:\n");
 	printf("e:\n");
-	bignum_print(&pk->e);
+	bignum_half_print(&pk->e);
 	printf("n:\n");
-	bignum_print(&pk->n);
+	bignum_half_print(&pk->n);
 	return 0;
 }

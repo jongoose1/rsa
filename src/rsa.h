@@ -10,7 +10,7 @@ Number of 4 byte words in a bignum
 512 -> 8192 bit modulus
 1024 -> 16384 bit modulus
 */
-#define NWORDS 32
+#define NWORDS 128
 
 /* Number of 4 byte words used in padding */
 #define NPADDING (NWORDS/128)
