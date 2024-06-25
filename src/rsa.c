@@ -7,7 +7,7 @@
 /* Begin helper functions. */
 
 /* O(log(n)) */
-int bit_shift_left(bignum * a) {
+static int bit_shift_left(bignum * a) {
 	if (!a) return -1;
 	int i;
 	int r = a->a[NWORDS-1] >> 31;
@@ -19,7 +19,7 @@ int bit_shift_left(bignum * a) {
 }
 
 /* O(log(n)) */
-int bit_shift_right(bignum * a) {
+static int bit_shift_right(bignum * a) {
 	if (!a) return -1;
 	int i;
 	int r = a->a[0] & 1;
@@ -31,29 +31,7 @@ int bit_shift_right(bignum * a) {
 }
 
 /* O(log(n)) */
-int simple_inplace_add(bignum * b, int i, u32 u) {
-	/* b = b + u*2^(32*i) */
-	u64 r;
-	while(i < NWORDS && u) {
-		r = (u64) b->a[i] + u;
-		b->a[i] = r;
-		u = r >> 32;
-		i++;
-	}
-	return u;
-}
-
-/* O(log(n)) */
-int simple_inplace_sub(bignum * b, int i, u32 u) {
-	/* b = b - u*2^(32*i) */
-	if (i >= NWORDS) return u;
-	int borrow = b->a[i] < u;
-	b->a[i] = b->a[i] - u;
-	return borrow?simple_inplace_sub(b, i+1, 1):0;
-}
-
-/* O(log(n)) */
-int inplace_sub(bignum * a, bignum const *b) {
+static int inplace_sub(bignum * a, bignum const *b) {
 	/* a = a - b */
 	/* |a| >= |b| */
 	if(!a || !b) return 1;
@@ -69,7 +47,7 @@ int inplace_sub(bignum * a, bignum const *b) {
 }
 
 /* O(log(n)) */
-int inplace_add(bignum *a, bignum const *b) {
+static int inplace_add(bignum *a, bignum const *b) {
 	/* r = a + b */
 	/* a and b non-negative */
 	if (!a || !b) return 1;
@@ -84,7 +62,7 @@ int inplace_add(bignum *a, bignum const *b) {
 }
 
 /* O(log^2(n)) */
-bignum sub(bignum const *a, bignum const *b, int sign) {
+static bignum sub(bignum const *a, bignum const *b, int sign) {
 	/* r = |a| - |b| */
 	/* sign(r) = sign */
 	/* prereq: |a| >= |b| */
@@ -97,7 +75,7 @@ bignum sub(bignum const *a, bignum const *b, int sign) {
 }
 
 /* O(log(n)) */
-bignum add(bignum const *a, bignum const *b, int sign) {
+static bignum add(bignum const *a, bignum const *b, int sign) {
 	/* r = |a| + |b| */
 	/* sign(r) = sign */
 	if (!a || !b) return bignum_zero();
@@ -108,7 +86,7 @@ bignum add(bignum const *a, bignum const *b, int sign) {
 }
 
 
-int last_one_bit(bignum const *a) {
+static int last_one_bit(bignum const *a) {
 	/* e.g. 0x00023199 returns 17 */
 	int r;
 	for (r = NWORDS *32 - 1; r > 0; r = r - 32) {
@@ -120,7 +98,7 @@ int last_one_bit(bignum const *a) {
 	return -1;
 }
 
-int bignum_quarter_print(bignum const *a){
+static int bignum_quarter_print(bignum const *a){
 	if (!a) return 1;
 	int i, j, k;
 	k = NWORDS/4-1;
@@ -133,7 +111,7 @@ int bignum_quarter_print(bignum const *a){
 	return 0;
 }
 
-int bignum_half_print(bignum const *a){
+static int bignum_half_print(bignum const *a){
 	if (!a) return 1;
 	int i, j, k;
 	k = NWORDS/2-1;
