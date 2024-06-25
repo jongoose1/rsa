@@ -1,6 +1,7 @@
 release/
 debug/
 keys/
+ciphers/
 *.x
 *.o
 *.kp
