@@ -599,6 +599,9 @@ keypair keygen(void) {
 		/* Choose two large prime numbers p and q. */
 		p = random_large_probable_prime(10);
 		q = random_large_probable_prime(10);
+		/* there is no check for the the difference of the primes */
+		/* odds of this being a problem are negligible when compared to
+		   the accuracy of the miller-rabin test */
 	
 		/* Compute n = pq. */
 		n = bignum_mul(&p, &q);
