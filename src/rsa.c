@@ -513,7 +513,7 @@ bignum random_large_probable_prime(int n) {
 
 	/* sqrt(2) */
 	/* Use this as a minimum so that n = pq is at least NWORDS*16 bits long. */
-	minimum.a[NWORDS/4-1] = 0xB504F000;
+	minimum.a[NWORDS/4-1] = 0xB504F334;
 
 
 	/* Note: Failing a Miller-Rabin test indicates a candidate is probably prime. */
