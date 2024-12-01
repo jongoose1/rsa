@@ -734,7 +734,7 @@ int encrypt_file(char const *fplainname, char const *fciphername, public_key con
 	char buffer[11] = "cipher.txt";
 	bignum m;
 	u32 chunks = 0;
-	if(!fplainname || !pk || bignum_is_zero(&pk->n) || strlen(fplainname) + 1 > MSIZE) return 1;
+	if(!fplainname || !pk || bignum_is_zero(&pk->n)) return 1;
 	fplain = fopen(fplainname, "rb");
 	if (!fplain) return 1;
 	if (!fciphername) fciphername = buffer;
@@ -743,13 +743,6 @@ int encrypt_file(char const *fplainname, char const *fciphername, public_key con
 	/* Metadata. 0 placeholder. */
 	m = bignum_zero();
 	if (fwrite(&m, CSIZE, 1, fcipher) != 1) return 1;
-	chunks++;
-	/* Filename. Must fit into one chunk. */
-	m = bignum_zero();
-	if (strlen(fplainname) + 1 > MSIZE) return 1; 
-	memcpy(m.a, fplainname, strlen(fplainname) + 1);
-	inplace_encrypt(&m, pk, 0);
-	if (fwrite(m.a, CSIZE, 1, fcipher) != 1) return 1;
 	chunks++;
 	/* Data. */
 	u32 bytes_read;
@@ -773,7 +766,7 @@ int encrypt_file(char const *fplainname, char const *fciphername, public_key con
 }
 
 /* O(m*log^3(n)) */
-int decrypt_file(char const *fciphername, keypair const *kp) {
+int decrypt_file(char const *fciphername, char const *fplainname, keypair const *kp) {
 	if (kp->sk.encrypted) {
 		printf("Secret key is encrypted\n");
 		return 1;
@@ -783,19 +776,18 @@ int decrypt_file(char const *fciphername, keypair const *kp) {
 	if (!fciphername || !kp || bignum_is_zero(&kp->pk.n)) return 1;
 	fcipher = fopen(fciphername, "rb");
 	if (!fcipher) return 1;
+	fplain = fopen(fplainname, "wb");
+	if (!fplain) return 1;
 	/* Metadata. */
 	c = bignum_zero();
 	if (fread(c.a, CSIZE, 1, fcipher) != 1) return 1;
 	inplace_decrypt(&c, kp);
 	u32 remaining_chunks = c.a[0] - 1;
 	u32 last_chunk_size = c.a[1];
-	/* Filename. */
-	c = bignum_zero();
-	if (fread(c.a, CSIZE, 1, fcipher) != 1) return 1;
-	remaining_chunks--;
-	inplace_decrypt(&c, kp);
-	fplain = fopen ((char *) c.a, "wb");
-	if (!fplain) return 1;
+	if (last_chunk_size > MSIZE || last_chunk_size == 0) {
+		printf("invalid metadata, most likely wrong key or password\n");
+		last_chunk_size = MSIZE;
+	}
 	/* Data. */
 	c = bignum_zero();
 	while (fread(c.a, CSIZE, 1, fcipher) == 1) {
