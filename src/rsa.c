@@ -553,9 +553,7 @@ bignum random_large_probable_prime(int n) {
 			} else if (result == 1) {
 				/* Test Failed. Candidate is probably prime. */
 				tests_failed++;
-				printf("Candidate #%d:\n", number_candidates);
-				bignum_quarter_print(&candidate);
-				printf("failed test #%d and is probably prime.\n\n", tests_failed);
+				printf("Candidate #%d failed test #%d and is probably prime.\n", number_candidates, tests_failed);
 			}
 		}
 	}
@@ -627,6 +625,7 @@ keypair keygen(void) {
 	keys.pk.e = e;
 	keys.pk.n = n;
 	keys.sk.d = d;
+	keys.sk.encrypted = 0;
 	return keys;
 }
 
@@ -661,6 +660,10 @@ bignum encrypt(bignum const *m, public_key const *pk) {
 /* O(log^3(n)) */
 int inplace_decrypt(bignum * m, keypair const *kp) {
 	if (!m || !kp || bignum_is_zero(&kp->pk.n)) return 1;
+	if (kp->sk.encrypted) {
+		printf("Secret key is encrypted\n");
+		return 1;
+	}
 	*m = bignum_mod_exp(m ,&kp->sk.d, &kp->pk.n);
 	return 0;
 }
@@ -717,6 +720,10 @@ int encrypt_file(char const *fplainname, char const *fciphername, public_key con
 
 /* O(m*log^3(n)) */
 int decrypt_file(char const *fciphername, keypair const *kp) {
+	if (kp->sk.encrypted) {
+		printf("Secret key is encrypted\n");
+		return 1;
+	}
 	FILE *fplain, *fcipher;
 	bignum c;
 	if (!fciphername || !kp || bignum_is_zero(&kp->pk.n)) return 1;
@@ -754,6 +761,10 @@ int decrypt_file(char const *fciphername, keypair const *kp) {
 
 /* O(log(n)) */
 int keypair_save(keypair const *keys, char const *filename) {
+	if (!keys->sk.encrypted) {
+		printf("Secret key is not encrypted, not writing to disk...\n");
+		return 1;
+	}
 	int r;
 	FILE *f;
 	if (!filename || !keys) return 1;
@@ -774,6 +785,9 @@ int keypair_load(keypair *keys, char const *filename) {
 	f = fopen(filename, "rb");
 	if (!f) return 2;
 	r = fread(keys, sizeof(keypair), 1, f);
+	if (!keys->sk.encrypted) {
+		printf("Secret key was not encrypted before it was written to a file! DO NOT USE!!!!\n");
+	}
 	if (r != 1) return 3;
 	r = fclose(f);
 	if (r) return 4;
@@ -810,6 +824,10 @@ int public_key_load(public_key *pk, char const *filename) {
 
 /* O(log(n)) */
 int keypair_print(keypair const *keys) {
+	if (!keys->sk.encrypted) {
+		printf("Secret key is not encrypted, not printing...\n");
+		return 1;
+	}
 	if (!keys) return 1;
 	public_key_print(&keys->pk);
 	printf("Private Key:\n");
@@ -845,7 +863,6 @@ bignum jg2(void * d, size_t n, public_key const *pk) {
 		}
 		hash.a[CSIZE/4 - 2] = 0xEFFDAFED;
 		hash.a[CSIZE/4 - 1] = 0;
-		bignum_print(&hash);
 		inplace_encrypt(&hash, pk, 1);
 	}
 	return hash;
@@ -858,5 +875,27 @@ bignum bignum_xor(bignum const *a, bignum const *b){
 		x.a[i] = a->a[i] ^ b->a[i];
 	}
 	return x;
+}
+
+int encrypt_secret_key(char * password, keypair *kp){
+	if (kp->sk.encrypted) {
+		printf("Secret key is already encrypted\n");
+		return 1;
+	}
+	bignum x = jg2(password, strlen(password), &kp->pk);
+	kp->sk.d = bignum_xor(&x, &kp->sk.d);
+	kp->sk.encrypted = 1;
+	return 0;
+}
+
+int decrypt_secret_key(char * password, keypair *kp){
+	if (!kp->sk.encrypted) {
+		printf("Secret key is already decrypted\n");
+		return 1;
+	}
+	bignum x = jg2(password, strlen(password), &kp->pk);
+	kp->sk.d = bignum_xor(&x, &kp->sk.d);
+	kp->sk.encrypted = 0;
+	return 0;
 }
 

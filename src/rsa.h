@@ -42,6 +42,7 @@ typedef struct public_key {
 
 typedef struct secret_key {
 	bignum d;
+	int encrypted;
 } secret_key;
 
 typedef struct keypair {
@@ -92,5 +93,7 @@ int public_key_print(public_key const *pk);
 keypair keygen(void);
 bignum jg2(void * d, size_t n, public_key const *pk);
 bignum bignum_xor(bignum const *a, bignum const *b);
+int encrypt_secret_key(char * password, keypair *kp);
+int decrypt_secret_key(char * password, keypair *kp);
 
 #endif
