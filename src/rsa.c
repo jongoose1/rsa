@@ -6,7 +6,7 @@
 #include "rsa.h"
 
 /* Threading */
-#define NTHREADS 1
+#define NTHREADS 5
 
 typedef struct {
 	int tid;
