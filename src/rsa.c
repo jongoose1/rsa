@@ -639,12 +639,15 @@ int bignum_pad(bignum * m) {
 }
 
 /* O(log^3(n)) */
-int inplace_encrypt(bignum * m, public_key const *pk) {
+int inplace_encrypt(bignum * m, public_key const *pk, int dont_pad) {
 	bignum max_message = bignum_zero();
 	max_message.a[MSIZE/4] = 1;
 	m->sign = 0;
-	if (!m || !pk || bignum_is_zero(&pk->n) || bignum_is_gte(m, &max_message)) return 1;
-	bignum_pad(m);
+	if (!m || !pk || bignum_is_zero(&pk->n)) return 1;
+	if (!dont_pad){
+		if(bignum_is_gte(m, &max_message)) return 1;
+		bignum_pad(m);
+	}
 	*m = bignum_mod_exp(m ,&pk->e, &pk->n);
 	return 0;
 }
@@ -652,7 +655,7 @@ int inplace_encrypt(bignum * m, public_key const *pk) {
 /* O(log^3(n)) */
 bignum encrypt(bignum const *m, public_key const *pk) {
 	bignum r = *m;
-	return inplace_encrypt(&r, pk)?bignum_zero():r;
+	return inplace_encrypt(&r, pk, 0)?bignum_zero():r;
 }
 
 /* O(log^3(n)) */
@@ -688,7 +691,7 @@ int encrypt_file(char const *fplainname, char const *fciphername, public_key con
 	m = bignum_zero();
 	if (strlen(fplainname) + 1 > MSIZE) return 1; 
 	memcpy(m.a, fplainname, strlen(fplainname) + 1);
-	inplace_encrypt(&m, pk);
+	inplace_encrypt(&m, pk, 0);
 	if (fwrite(m.a, CSIZE, 1, fcipher) != 1) return 1;
 	chunks++;
 	/* Data. */
@@ -696,7 +699,7 @@ int encrypt_file(char const *fplainname, char const *fciphername, public_key con
 	do {
 		m = bignum_zero();
 		bytes_read = fread(m.a, 1, MSIZE, fplain);
-		inplace_encrypt(&m, pk);
+		inplace_encrypt(&m, pk, 0);
 		if (fwrite(m.a, CSIZE, 1, fcipher) != 1) return 1;
 		chunks++;
 	} while (bytes_read == MSIZE);
@@ -704,7 +707,7 @@ int encrypt_file(char const *fplainname, char const *fciphername, public_key con
 	m = bignum_zero();
 	m.a[0] = chunks;
 	m.a[1] = bytes_read;
-	inplace_encrypt(&m, pk);
+	inplace_encrypt(&m, pk, 0);
 	fseek(fcipher, 0, SEEK_SET);
 	if (fwrite(m.a, CSIZE, 1, fcipher) != 1) return 1;
 	fclose(fplain);
@@ -825,3 +828,35 @@ int public_key_print(public_key const *pk) {
 	bignum_half_print(&pk->n);
 	return 0;
 }
+
+bignum jg2(void * d, size_t n, public_key const *pk) {
+	if (!d || !pk) return bignum_zero();
+	char *data = (char *)d;
+	bignum hash = bignum_zero();
+	char * hp = (char *) hash.a;
+	memcpy(hp, pk->n.a, BSIZE);
+	while (n > 0) {
+		if (n >=BSIZE){
+			memcpy(hp + BSIZE, data, BSIZE);
+			n -= BSIZE;
+		} else {
+			memcpy(hp + BSIZE, data, n);
+			n = 0;
+		}
+		hash.a[CSIZE/4 - 2] = 0xEFFDAFED;
+		hash.a[CSIZE/4 - 1] = 0;
+		bignum_print(&hash);
+		inplace_encrypt(&hash, pk, 1);
+	}
+	return hash;
+}
+
+bignum bignum_xor(bignum const *a, bignum const *b){
+	bignum x = bignum_zero();
+	int i;
+	for (i = 0; i < NWORDS; i++){
+		x.a[i] = a->a[i] ^ b->a[i];
+	}
+	return x;
+}
+

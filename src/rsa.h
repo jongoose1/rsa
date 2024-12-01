@@ -2,6 +2,7 @@
 #define RSA_H
 
 #include <stdint.h>
+#include <stddef.h>
 
 /*
 Number of 4 byte words in a bignum
@@ -22,6 +23,9 @@ Number of 4 byte words in a bignum
 /* the '- 4' is needed so message < modulus (no two messages can be congruent mod N) */
 /* modulus is gauranteed to be NWORDS*16 bits long (MSB = 1) */
 #define MSIZE (CSIZE - 4 - NPADDING*4)
+
+/* block size in bytes for JG2 hashing */
+#define BSIZE ((CSIZE - 8)/2)
 
 typedef uint64_t u64;
 typedef uint32_t u32;
@@ -73,7 +77,7 @@ int bignum_is_even(bignum const *a);
 int bignum_is_odd(bignum const *a);
 int miller_rabin(bignum const * n, bignum const * a);
 int bezout_coefficients(bignum const *a, bignum const *b, bignum *x, bignum *y);
-int inplace_encrypt(bignum * m, public_key const *pk);
+int inplace_encrypt(bignum * m, public_key const *pk, int dont_pad);
 bignum encrypt(bignum const *m, public_key const *pk);
 int inplace_decrypt(bignum * m, keypair const *kp);
 bignum decrypt(bignum const *m, keypair const *kp);
@@ -86,5 +90,7 @@ int public_key_load(public_key *pk, char const *filename);
 int keypair_print(keypair const *keys);
 int public_key_print(public_key const *pk);
 keypair keygen(void);
+bignum jg2(void * d, size_t n, public_key const *pk);
+bignum bignum_xor(bignum const *a, bignum const *b);
 
 #endif

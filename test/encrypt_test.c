@@ -19,7 +19,7 @@ int main(void) {
 	printf("Plaintext:\n");
 	bignum_print(&message);
 
-	inplace_encrypt(&message, &keys.pk);
+	inplace_encrypt(&message, &keys.pk, 0);
 
 	printf("Ciphertext:\n");
 	bignum_print(&message);
