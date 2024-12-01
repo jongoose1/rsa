@@ -782,17 +782,22 @@ int decrypt_file(char const *fciphername, char const *fplainname, keypair const 
 	c = bignum_zero();
 	if (fread(c.a, CSIZE, 1, fcipher) != 1) return 1;
 	inplace_decrypt(&c, kp);
-	u32 remaining_chunks = c.a[0] - 1;
+	u32 completed_chunks = 1;
+	u32 total_chunks = c.a[0];
+	u32 remaining_chunks = total_chunks - completed_chunks;
 	u32 last_chunk_size = c.a[1];
 	if (last_chunk_size > MSIZE || last_chunk_size == 0) {
-		printf("invalid metadata, most likely wrong key or password\n");
+		printf("Invalid metadata, most likely wrong key or password\n");
 		last_chunk_size = MSIZE;
 	}
+	printf("Chunk %d/%d %.2f%%\n", completed_chunks, total_chunks, (float)100*completed_chunks/total_chunks);
 	/* Data. */
 	c = bignum_zero();
 	while (fread(c.a, CSIZE, 1, fcipher) == 1) {
-		remaining_chunks--;
 		inplace_decrypt(&c, kp);
+		remaining_chunks--;
+		completed_chunks++;
+		printf("Chunk %d/%d %.2f%%\n", completed_chunks, total_chunks, (float)100*completed_chunks/total_chunks);
 		if (remaining_chunks > 0) {
 			if (fwrite(c.a, MSIZE, 1, fplain) != 1) return 1;
 		} else {
