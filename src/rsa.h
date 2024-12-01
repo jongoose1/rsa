@@ -11,7 +11,7 @@ Number of 4 byte words in a bignum
 512 -> 8192 bit modulus
 1024 -> 16384 bit modulus
 */
-#define NWORDS 256
+#define NWORDS 64
 
 /* Number of 4 byte words used in padding */
 #define NPADDING (NWORDS/128)
@@ -55,7 +55,7 @@ bignum bignum_small(u32 x);
 bignum bignum_random(void);
 bignum bignum_half_random(void);
 bignum bignum_quarter_random(void);
-bignum random_large_probable_prime(int n);
+bignum random_large_probable_prime(int n, int tid);
 bignum bignum_mul(bignum const *p, bignum const *q);
 bignum bignum_add(bignum const *a, bignum const *b);
 bignum bignum_sub(bignum const *a, bignum const *b);

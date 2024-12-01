@@ -2,7 +2,31 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <pthread.h>
 #include "rsa.h"
+
+/* Threading */
+#define NTHREADS 1
+
+typedef struct {
+	int tid;
+	bignum *prime;
+} args_t;
+
+static int prime_found = 0;
+pthread_mutex_t lock;
+
+static void *tf(void *arg) {
+	args_t *arguments = (args_t *)arg;
+	bignum p = random_large_probable_prime(10, arguments->tid);
+	pthread_mutex_lock(&lock);
+	if (!prime_found) {
+		prime_found = 1;
+		*arguments->prime = p;
+	}
+	pthread_mutex_unlock(&lock);
+	return NULL;
+}
 
 /* Begin helper functions. */
 
@@ -498,11 +522,12 @@ static bignum primorial_init() {
 }
 
 /* 
-** Generate random NWORDS*8 bit probable prime by performing n Miller-Rabin tests
+** Generate random NWORDS*8 bit probable prime by performing tests_required Miller-Rabin tests
 ** with random bases.
 */
 /* O(log^4(n)) */
-bignum random_large_probable_prime(int n) {
+bignum random_large_probable_prime(int tests_required, int tid) {
+
 	bignum witness, candidate;
 	bignum minimum = bignum_zero();
 	bignum gcd;
@@ -519,7 +544,7 @@ bignum random_large_probable_prime(int n) {
 	/* Note: Failing a Miller-Rabin test indicates a candidate is probably prime. */
 	int tests_failed = 0;
 	int number_candidates = 0;
-	while (tests_failed < n) {
+	while (tests_failed < tests_required && !prime_found) {
 		
 		/* Find an appropriate candidate. */
 		while (1) {
@@ -537,27 +562,31 @@ bignum random_large_probable_prime(int n) {
 		number_candidates++;
 
 		tests_failed = 0;
-		while (tests_failed < n) {
+		while (tests_failed < tests_required && !prime_found) {
 			witness = bignum_random();
 			bignum_reduce(&witness, &candidate);
 			int result = miller_rabin(&candidate, &witness);
 			if (result == -1 || result == 0) { 
 				/* Invalid candidate or candidate is composite. */
-				if (result == 0) { 
+				if (result == 0) {
+					pthread_mutex_lock(&lock);
 					bignum_quarter_print(&witness);
-					printf("is a Miller-Rabin witness for the compositeness of candidate #%d:\n", number_candidates);
+					printf("is a Miller-Rabin witness for the compositeness of candidate [%d]#%d:\n", tid, number_candidates);
 					bignum_quarter_print(&candidate);
 					printf("\n");
+					pthread_mutex_unlock(&lock);
 				}
 				break;
 			} else if (result == 1) {
 				/* Test Failed. Candidate is probably prime. */
 				tests_failed++;
-				printf("Candidate #%d failed test #%d and is probably prime.\n", number_candidates, tests_failed);
+				printf("[%d] Candidate #%d failed test #%d and is probably prime.\n", tid, number_candidates, tests_failed);
 			}
 		}
 	}
-	return candidate;
+	/* this if is unnecessary but helps me sleep at night */
+	if (prime_found) return bignum_zero();
+	else return candidate;
 }
 
 /* O(log^3(n)) */
@@ -595,8 +624,33 @@ keypair keygen(void) {
 	n = bignum_zero();
 	while (bignum_is_lt(&n, &n_minimum)) {
 		/* Choose two large prime numbers p and q. */
+		pthread_t ts[NTHREADS*2];
+		args_t argsa[NTHREADS*2];
+		int i;
+		for (i=0; i < NTHREADS; i++){
+			argsa[i].tid = i;
+			argsa[i].prime = &p;
+			pthread_create(&ts[i], NULL, tf, &argsa[i]);
+		}
+		for (i = 0; i < NTHREADS; i++) {
+			pthread_join(ts[i], NULL);
+		}
+		prime_found = 0;
+		
+		for (i=NTHREADS; i < NTHREADS*2; i++){
+			argsa[i].tid = i;
+			argsa[i].prime = &q;
+			pthread_create(&ts[i], NULL, tf, &argsa[i]);
+		}
+		for (i = NTHREADS; i < NTHREADS*2; i++) {
+			pthread_join(ts[i], NULL);
+		}
+
+		/*
 		p = random_large_probable_prime(10);
 		q = random_large_probable_prime(10);
+		*/
+
 		/* there is no check for the the difference of the primes */
 		/* odds of this being a problem are negligible when compared to
 		   the accuracy of the miller-rabin test */

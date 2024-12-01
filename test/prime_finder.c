@@ -5,7 +5,7 @@
 
 int main(void) {
 	srand(time(0));
-	bignum c = random_large_probable_prime(1);
+	bignum c = random_large_probable_prime(1, 1);
 	bignum_print(&c);
 	return 0;
 }
