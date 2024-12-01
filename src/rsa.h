@@ -19,6 +19,8 @@ Number of 4 byte words in a bignum
 #define CSIZE (NWORDS*2)
 
 /* Maximum size in bytes of each plaintext message */
+/* the '- 4' is needed so message < modulus (no two messages can be congruent mod N) */
+/* modulus is gauranteed to be NWORDS*16 bits long (MSB = 1) */
 #define MSIZE (CSIZE - 4 - NPADDING*4)
 
 typedef uint64_t u64;
