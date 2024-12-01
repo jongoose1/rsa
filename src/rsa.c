@@ -3,6 +3,8 @@
 #include <string.h>
 #include <assert.h>
 #include <pthread.h>
+#include <termios.h>
+#include <unistd.h>
 #include "rsa.h"
 
 /* Threading */
@@ -687,7 +689,7 @@ keypair keygen(void) {
 int bignum_pad(bignum * m) {
 	int i;
 	if (NPADDING == 0) return 0;
-	for (i = MSIZE/4; i < CSIZE/4 - 1; i++) m->a[i] = rand();
+	for (i = MSIZE/4; i < DSIZE/4 - 1; i++) m->a[i] = rand();
 	return 0;
 }
 
@@ -742,7 +744,7 @@ int encrypt_file(char const *fplainname, char const *fciphername, public_key con
 	if (!fcipher) return 1;
 	/* Metadata. 0 placeholder. */
 	m = bignum_zero();
-	if (fwrite(&m, CSIZE, 1, fcipher) != 1) return 1;
+	if (fwrite(&m, DSIZE, 1, fcipher) != 1) return 1;
 	chunks++;
 	/* Data. */
 	u32 bytes_read;
@@ -750,7 +752,7 @@ int encrypt_file(char const *fplainname, char const *fciphername, public_key con
 		m = bignum_zero();
 		bytes_read = fread(m.a, 1, MSIZE, fplain);
 		inplace_encrypt(&m, pk, 0);
-		if (fwrite(m.a, CSIZE, 1, fcipher) != 1) return 1;
+		if (fwrite(m.a, DSIZE, 1, fcipher) != 1) return 1;
 		chunks++;
 	} while (bytes_read == MSIZE);
 	/* Go back and write metadata. */
@@ -759,7 +761,7 @@ int encrypt_file(char const *fplainname, char const *fciphername, public_key con
 	m.a[1] = bytes_read;
 	inplace_encrypt(&m, pk, 0);
 	fseek(fcipher, 0, SEEK_SET);
-	if (fwrite(m.a, CSIZE, 1, fcipher) != 1) return 1;
+	if (fwrite(m.a, DSIZE, 1, fcipher) != 1) return 1;
 	fclose(fplain);
 	fclose(fcipher);
 	return 0;
@@ -780,7 +782,7 @@ int decrypt_file(char const *fciphername, char const *fplainname, keypair const 
 	if (!fplain) return 1;
 	/* Metadata. */
 	c = bignum_zero();
-	if (fread(c.a, CSIZE, 1, fcipher) != 1) return 1;
+	if (fread(c.a, DSIZE, 1, fcipher) != 1) return 1;
 	inplace_decrypt(&c, kp);
 	u32 completed_chunks = 1;
 	u32 total_chunks = c.a[0];
@@ -793,7 +795,7 @@ int decrypt_file(char const *fciphername, char const *fplainname, keypair const 
 	printf("Chunk %d/%d %.2f%%\n", completed_chunks, total_chunks, (float)100*completed_chunks/total_chunks);
 	/* Data. */
 	c = bignum_zero();
-	while (fread(c.a, CSIZE, 1, fcipher) == 1) {
+	while (fread(c.a, DSIZE, 1, fcipher) == 1) {
 		inplace_decrypt(&c, kp);
 		remaining_chunks--;
 		completed_chunks++;
@@ -912,8 +914,8 @@ bignum jg2(void * d, size_t n, public_key const *pk) {
 			memcpy(hp + BSIZE, data, n);
 			n = 0;
 		}
-		hash.a[CSIZE/4 - 2] = 0xEFFDAFED;
-		hash.a[CSIZE/4 - 1] = 0;
+		hash.a[DSIZE/4 - 2] = 0xEFFDAFED;
+		hash.a[DSIZE/4 - 1] = 0;
 		inplace_encrypt(&hash, pk, 1);
 	}
 	return hash;
@@ -950,3 +952,19 @@ int decrypt_secret_key(char * password, keypair *kp){
 	return 0;
 }
 
+int get_password(char *password, int buffer_size){
+	static struct termios old, new;
+	char c;
+
+	if (tcgetattr(STDIN_FILENO, &old) != 0) return -1;
+	new = old;
+	new.c_lflag &= ~ECHO;
+	if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &new) != 0) return -1;
+	int password_length = 0;
+	printf("Password: ");
+	while ((c=getchar())!='\n' && c!=EOF && password_length+1 < buffer_size) password[password_length++] = c;
+	printf("\n");
+	password[password_length] = '\0';
+	tcsetattr(STDIN_FILENO, TCSAFLUSH, &old);
+	return password_length;
+}

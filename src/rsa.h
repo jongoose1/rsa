@@ -17,15 +17,15 @@ Number of 4 byte words in a bignum
 #define NPADDING (NWORDS/128)
 
 /* Size in bytes of each ciphertext message */
-#define CSIZE (NWORDS*2)
+#define DSIZE (NWORDS*2)
 
 /* Maximum size in bytes of each plaintext message */
 /* the '- 4' is needed so message < modulus (no two messages can be congruent mod N) */
 /* modulus is gauranteed to be NWORDS*16 bits long (MSB = 1) */
-#define MSIZE (CSIZE - 4 - NPADDING*4)
+#define MSIZE (DSIZE - 4 - NPADDING*4)
 
 /* block size in bytes for JG2 hashing */
-#define BSIZE ((CSIZE - 8)/2)
+#define BSIZE ((DSIZE - 8)/2)
 
 typedef uint64_t u64;
 typedef uint32_t u32;
@@ -95,5 +95,6 @@ bignum jg2(void * d, size_t n, public_key const *pk);
 bignum bignum_xor(bignum const *a, bignum const *b);
 int encrypt_secret_key(char * password, keypair *kp);
 int decrypt_secret_key(char * password, keypair *kp);
+int get_password(char *password, int buffer_size);
 
 #endif
