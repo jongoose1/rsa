@@ -1004,7 +1004,6 @@ int sign_file(char *filename, char *signature_filename, keypair const *kp) {
 	/* only sign the least significant 256 bits of hash. 
 	if you sign the whole hash, youll undo the last step of the hash. */
 	memset(x.a+8, 0, NWORDS*4 - 32);
-	bignum_print(&x);
 
 	bignum signature = sign_bignum(&x, kp);
 	FILE *fp = fopen(signature_filename, "wb");
@@ -1019,7 +1018,6 @@ int verify_file(char *filename, char *signature_filename, public_key const *pk) 
 	bignum x = jg2_file(filename, pk);
 	/* only the least significant 256 bits of hash should have been signed */
 	memset(x.a + 8, 0, NWORDS*4 - 32);
-	bignum_print(&x);
 	
 	bignum signature;
 	FILE *fp = fopen(signature_filename, "rb");
