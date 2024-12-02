@@ -23,11 +23,14 @@ int main(int argc, char ** argv) {
 		return 1;
 	}
 
+
 	int n = strlen(argv[1]);
 
 	keypair kp;
-	keypair_load(&kp, "keys/625.kp");
+	keypair_load(&kp, "keys/121.kp");
 
+	bignum fh = jg2_file("file.txt", &kp.pk);
+	bignum_print(&fh);
 	bignum hash1;
 	hash1 = jg2(argv[1],n,&kp.pk);
 	bignum_print(&hash1);

@@ -79,9 +79,9 @@ int bignum_is_odd(bignum const *a);
 int miller_rabin(bignum const * n, bignum const * a);
 int bezout_coefficients(bignum const *a, bignum const *b, bignum *x, bignum *y);
 int inplace_encrypt(bignum * m, public_key const *pk, int dont_pad);
-bignum encrypt(bignum const *m, public_key const *pk);
-int inplace_decrypt(bignum * m, keypair const *kp);
-bignum decrypt(bignum const *m, keypair const *kp);
+bignum encrypt(bignum const *m, public_key const *pk, int dont_pad);
+int inplace_decrypt(bignum * c, keypair const *kp);
+bignum decrypt(bignum const *c, keypair const *kp);
 int encrypt_file(char const *fplainname, char const *fciphername, public_key const *pk);
 int decrypt_file(char const *fciphername, char const *fplainname, keypair const *kp);
 int keypair_save(keypair const *keys, char const *filename);
@@ -92,9 +92,14 @@ int keypair_print(keypair const *keys);
 int public_key_print(public_key const *pk);
 keypair keygen(void);
 bignum jg2(void * d, size_t n, public_key const *pk);
+bignum jg2_file(char *fname, public_key const *pk);
 bignum bignum_xor(bignum const *a, bignum const *b);
 int encrypt_secret_key(char * password, keypair *kp);
 int decrypt_secret_key(char * password, keypair *kp);
 int get_password(char *password, int buffer_size);
+bignum sign_bignum(bignum const *m, keypair const *kp);
+int verify_bignum(bignum const *m, bignum const *signature, public_key const *pk);
+int sign_file(char *filename, char *signature_filename, keypair const *kp);
+int verify_file(char *filename, char *signature_filename, public_key const *pk);
 
 #endif

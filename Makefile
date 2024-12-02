@@ -1,4 +1,4 @@
-OUTS := encrypt decrypt keygen cppk print_keypair print_public_key
+OUTS := encrypt decrypt keygen cppk print_keypair print_public_key sign verify
 INSTALLDIR := ~/bin
 
 .PHONY: all

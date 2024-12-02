@@ -708,25 +708,25 @@ int inplace_encrypt(bignum * m, public_key const *pk, int dont_pad) {
 }
 
 /* O(log^3(n)) */
-bignum encrypt(bignum const *m, public_key const *pk) {
+bignum encrypt(bignum const *m, public_key const *pk, int dont_pad) {
 	bignum r = *m;
-	return inplace_encrypt(&r, pk, 0)?bignum_zero():r;
+	return inplace_encrypt(&r, pk, dont_pad)?bignum_zero():r;
 }
 
 /* O(log^3(n)) */
-int inplace_decrypt(bignum * m, keypair const *kp) {
-	if (!m || !kp || bignum_is_zero(&kp->pk.n)) return 1;
+int inplace_decrypt(bignum *c, keypair const *kp) {
+	if (!c || !kp || bignum_is_zero(&kp->pk.n)) return 1;
 	if (kp->sk.encrypted) {
 		printf("Secret key is encrypted\n");
 		return 1;
 	}
-	*m = bignum_mod_exp(m ,&kp->sk.d, &kp->pk.n);
+	*c = bignum_mod_exp(c ,&kp->sk.d, &kp->pk.n);
 	return 0;
 }
 
 /* O(log^3(n)) */
-bignum decrypt(bignum const *m, keypair const *kp) {
-	bignum r = *m;
+bignum decrypt(bignum const *c, keypair const *kp) {
+	bignum r = *c;
 	return inplace_decrypt(&r, kp)?bignum_zero():r;
 }
 
@@ -907,7 +907,7 @@ bignum jg2(void * d, size_t n, public_key const *pk) {
 	char * hp = (char *) hash.a;
 	memcpy(hp, pk->n.a, BSIZE);
 	while (n > 0) {
-		if (n >=BSIZE){
+		if (n >= BSIZE){
 			memcpy(hp + BSIZE, data, BSIZE);
 			n -= BSIZE;
 		} else {
@@ -918,6 +918,24 @@ bignum jg2(void * d, size_t n, public_key const *pk) {
 		hash.a[DSIZE/4 - 1] = 0;
 		inplace_encrypt(&hash, pk, 1);
 	}
+	return hash;
+}
+
+bignum jg2_file(char *fname, public_key const *pk) {
+	if (!fname || !pk) return bignum_zero();
+	FILE *fp = fopen(fname, "rb");
+	if (!fp) return bignum_zero();
+	bignum hash = bignum_zero();
+	char * hp = (char *) hash.a;
+	u32 bytes_read;
+	memcpy(hp, pk->n.a, BSIZE);
+	do {
+		bytes_read = fread(hp + BSIZE, 1, BSIZE, fp);
+		hash.a[DSIZE/4 - 2] = 0xEFFDAFED;
+		hash.a[DSIZE/4 - 1] = 0;
+		inplace_encrypt(&hash, pk, 1);
+	} while (bytes_read == BSIZE);
+	fclose(fp);
 	return hash;
 }
 
@@ -967,4 +985,45 @@ int get_password(char *password, int buffer_size){
 	password[password_length] = '\0';
 	tcsetattr(STDIN_FILENO, TCSAFLUSH, &old);
 	return password_length;
+}
+
+bignum sign_bignum(bignum const *m, keypair const *kp) {
+	return decrypt(m, kp);
+}
+
+int verify_bignum(bignum const *m, bignum const *signature, public_key const *pk) {
+	/* return 1: VERIFIED
+	   return 0; NOT VERIFIED */
+	bignum se = encrypt(signature, pk, 1);
+	return bignum_is_eq(&se, m);
+}
+
+int sign_file(char *filename, char *signature_filename, keypair const *kp) {
+	bignum x = jg2_file(filename, &kp->pk);
+	
+	/* only sign the least significant 256 bits of hash. 
+	if you sign the whole hash, youll undo the last step of the hash. */
+	memset(x.a+8, 0, NWORDS*4 - 32);
+	bignum_print(&x);
+
+	bignum signature = sign_bignum(&x, kp);
+	FILE *fp = fopen(signature_filename, "wb");
+	fwrite(&signature, sizeof(signature), 1 ,fp);
+	fclose(fp);
+	return 0;
+}
+
+int verify_file(char *filename, char *signature_filename, public_key const *pk) {
+	/* return 1: VERIFIED
+	   return 0; NOT VERIFIED */
+	bignum x = jg2_file(filename, pk);
+	/* only the least significant 256 bits of hash should have been signed */
+	memset(x.a + 8, 0, NWORDS*4 - 32);
+	bignum_print(&x);
+	
+	bignum signature;
+	FILE *fp = fopen(signature_filename, "rb");
+	fread(&signature, sizeof(signature), 1, fp);
+	fclose(fp);
+	return verify_bignum(&x, &signature, pk);
 }
