@@ -96,7 +96,7 @@ bignum jg2_file(char *fname, public_key const *pk);
 bignum bignum_xor(bignum const *a, bignum const *b);
 int encrypt_secret_key(char * password, keypair *kp);
 int decrypt_secret_key(char * password, keypair *kp);
-int get_password(char *password, int buffer_size);
+int get_password(char *password, int buffer_size, char * prompt);
 bignum sign_bignum(bignum const *m, keypair const *kp);
 int verify_bignum(bignum const *m, bignum const *signature, public_key const *pk);
 int sign_file(char *filename, char *signature_filename, keypair const *kp);

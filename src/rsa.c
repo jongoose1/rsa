@@ -970,7 +970,7 @@ int decrypt_secret_key(char * password, keypair *kp){
 	return 0;
 }
 
-int get_password(char *password, int buffer_size){
+int get_password(char *password, int buffer_size, char *prompt){
 	static struct termios old, new;
 	char c;
 
@@ -979,7 +979,7 @@ int get_password(char *password, int buffer_size){
 	new.c_lflag &= ~ECHO;
 	if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &new) != 0) return -1;
 	int password_length = 0;
-	printf("Password: ");
+	printf("%s", prompt);
 	while ((c=getchar())!='\n' && c!=EOF && password_length+1 < buffer_size) password[password_length++] = c;
 	printf("\n");
 	password[password_length] = '\0';
@@ -999,13 +999,17 @@ int verify_bignum(bignum const *m, bignum const *signature, public_key const *pk
 }
 
 int sign_file(char *filename, char *signature_filename, keypair const *kp) {
+	printf("Hashing...\n");
 	bignum x = jg2_file(filename, &kp->pk);
 	
 	/* only sign the least significant 256 bits of hash. 
 	if you sign the whole hash, youll undo the last step of the hash. */
 	memset(x.a+8, 0, NWORDS*4 - 32);
 
+	printf("Signing...\n");
 	bignum signature = sign_bignum(&x, kp);
+	printf("Signature:\n");
+	bignum_print(&signature);
 	FILE *fp = fopen(signature_filename, "wb");
 	fwrite(&signature, sizeof(signature), 1 ,fp);
 	fclose(fp);
@@ -1015,6 +1019,7 @@ int sign_file(char *filename, char *signature_filename, keypair const *kp) {
 int verify_file(char *filename, char *signature_filename, public_key const *pk) {
 	/* return 1: VERIFIED
 	   return 0; NOT VERIFIED */
+	printf("Hashing...\n");
 	bignum x = jg2_file(filename, pk);
 	/* only the least significant 256 bits of hash should have been signed */
 	memset(x.a + 8, 0, NWORDS*4 - 32);
@@ -1023,5 +1028,6 @@ int verify_file(char *filename, char *signature_filename, public_key const *pk) 
 	FILE *fp = fopen(signature_filename, "rb");
 	fread(&signature, sizeof(signature), 1, fp);
 	fclose(fp);
+	printf("Verifying...\n");
 	return verify_bignum(&x, &signature, pk);
 }

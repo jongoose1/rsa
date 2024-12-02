@@ -21,9 +21,9 @@ int main(int argc, char ** argv) {
 		return 1;
 	}
 	
-	keypair kp = keygen();
 	char password[64];
-	if (get_password(password, 64) == -1) return 1;
+	if (get_password(password, 64, "Create a Password:") == -1) return 1;
+	keypair kp = keygen();
 	encrypt_secret_key(password, &kp);
 
 	return keypair_save(&kp, argv[1]);

@@ -25,7 +25,7 @@ int main(int argc, char **argv) {
 	fciphername = argv[1];
 	fplainname = argv[2];
 	fkeyname = argv[3];
-	if (get_password(password, 64) == -1) return 1;
+	if (get_password(password, 64, "Enter password:") == -1) return 1;
 
 	keypair kp;
 	if (keypair_load(&kp, fkeyname)) return 1;
