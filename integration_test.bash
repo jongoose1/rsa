@@ -1,19 +1,25 @@
 #!/bin/bash
 
 # Make.
-make keygen encrypt decrypt
+make
 
 # Generate keys.
 ./keygen keys.kp
 
 # Create plaintext.
 echo "Hello, nobody!" > plain.txt
-cp plain.txt plain_copy.txt
 echo "Plaintext:"
 cat plain.txt
 
+# Sign Plaintext
+./sign plain.txt signature.txt keys.kp
+
+#Verify Signature
+./verify plain.txt signature.txt -kp keys.kp
+
 # Encrypt.
-./encrypt plain.txt -kp keys.kp -o cipher.txt
+./encrypt plain.txt -kp keys.kp
+
 echo "Ciphertext:"
 hexdump -x cipher.txt
 
@@ -21,12 +27,9 @@ hexdump -x cipher.txt
 rm plain.txt
 
 #Decrypt.
-./decrypt cipher.txt keys.kp
+./decrypt cipher.txt plain2.txt keys.kp
 echo "Plaintext:"
-cat plain.txt
-
-#Compare.
-diff plain.txt plain_copy.txt
+cat plain2.txt
 
 #Delete old files.
-rm plain.txt cipher.txt plain_copy.txt keys.kp
+rm cipher.txt plain2.txt keys.kp signature.txt
