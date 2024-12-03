@@ -16,7 +16,7 @@ typedef struct {
 } args_t;
 
 static int prime_found = 0;
-pthread_mutex_t lock;
+static pthread_mutex_t lock;
 
 static void *tf(void *arg) {
 	args_t *arguments = (args_t *)arg;
@@ -27,6 +27,46 @@ static void *tf(void *arg) {
 		*arguments->prime = p;
 	}
 	pthread_mutex_unlock(&lock);
+	return NULL;
+}
+
+typedef struct {
+	bignum c;
+	u32 chunk_index;
+} payload;
+
+/* shared decrypt threads memory */
+static keypair const *global_kp;
+static FILE *global_plaintext;
+static pthread_mutex_t decrypt_lock;
+static int completed_chunks;
+static int total_chunks;
+
+/* set to one once jobs have been assigned. signals threads to end */
+static int jobs_assigned = 0;
+
+/* signals a new job has been assigned or completed */
+static int complete[NTHREADS];
+
+/* job info for each thread */
+payload payloads[NTHREADS];
+
+static void *decrypt_tf(void * arg) {
+	int tid = *(int *)arg;
+	while (!complete[tid] || !jobs_assigned) {
+		if (!complete[tid]) {
+			/* a job has been assigned */
+			inplace_decrypt(&payloads[tid].c, global_kp);
+			pthread_mutex_lock(&decrypt_lock);
+			fseek(global_plaintext, (payloads[tid].chunk_index-1)*MSIZE, SEEK_SET);
+			fwrite(payloads[tid].c.a, MSIZE, 1, global_plaintext);
+			completed_chunks++;
+			printf("[%d] Chunk %d/%d %.2f%%\n", tid, payloads[tid].chunk_index + 1, total_chunks, (float)100*completed_chunks/total_chunks);
+			pthread_mutex_unlock(&decrypt_lock);
+			complete[tid] = 1;
+		}
+		sleep(0.1);
+	}
 	return NULL;
 }
 
@@ -781,32 +821,60 @@ int decrypt_file(char const *fciphername, char const *fplainname, keypair const 
 	fplain = fopen(fplainname, "wb");
 	if (!fplain) return 1;
 	/* Metadata. */
+	printf("Decrypting metadata\n");
 	c = bignum_zero();
 	if (fread(c.a, DSIZE, 1, fcipher) != 1) return 1;
 	inplace_decrypt(&c, kp);
-	u32 completed_chunks = 1;
-	u32 total_chunks = c.a[0];
-	u32 remaining_chunks = total_chunks - completed_chunks;
+	completed_chunks = 1;
+	total_chunks = c.a[0];
 	u32 last_chunk_size = c.a[1];
+	printf("Chunk 1/%d %.2f%%\n", total_chunks, 100.0F/total_chunks);
 	if (last_chunk_size > MSIZE || last_chunk_size == 0) {
 		printf("Invalid metadata, most likely wrong key or password\n");
 		last_chunk_size = MSIZE;
 	}
-	printf("Chunk %d/%d %.2f%%\n", completed_chunks, total_chunks, (float)100*completed_chunks/total_chunks);
 	/* Data. */
-	c = bignum_zero();
-	while (fread(c.a, DSIZE, 1, fcipher) == 1) {
-		inplace_decrypt(&c, kp);
-		remaining_chunks--;
-		completed_chunks++;
-		printf("Chunk %d/%d %.2f%%\n", completed_chunks, total_chunks, (float)100*completed_chunks/total_chunks);
-		if (remaining_chunks > 0) {
-			if (fwrite(c.a, MSIZE, 1, fplain) != 1) return 1;
-		} else {
-			if (fwrite(c.a, last_chunk_size, 1, fplain) != 1) return 1;
-		}
-		c = bignum_zero();
+	printf("Decrypting data\n");
+	global_kp = kp;
+	global_plaintext = fplain;
+
+	/* create threads */
+	pthread_t ts[NTHREADS];
+	int tids[NTHREADS];
+	int i;
+	for (i=0; i < NTHREADS; i++){
+		tids[i] = i;
+		complete[i] = 1;
+		pthread_create(&ts[i], NULL, decrypt_tf, &tids[i]);
 	}
+
+	/* assign jobs */
+	for (i = 1; i < total_chunks - 1; i++) {
+		c = bignum_zero();
+		fread(c.a, DSIZE, 1, fcipher);
+		int j;
+		/* too lazy to use cond signals */
+		for (j=0; !complete[j]; j = (j+1)%NTHREADS) sleep(0.1); 
+		payloads[j].c = c;
+		payloads[j].chunk_index = i;
+		complete[j] = 0;
+	}
+
+	jobs_assigned = 1;
+
+	/* wait for remaining jobs to complete */
+	for (i = 0; i < NTHREADS; i++) {
+		pthread_join(ts[i], NULL);
+	}
+	
+	/* decrypt last chunk */
+	c = bignum_zero();
+	fread(c.a, DSIZE, 1, fcipher);
+	inplace_decrypt(&c, kp);
+	fseek(fplain, (total_chunks - 2)*MSIZE, SEEK_SET);
+	fwrite(c.a, last_chunk_size, 1, fplain);
+	completed_chunks++;
+	printf("Chunk %d/%d %.2f%%\n", total_chunks, total_chunks, (float)100*completed_chunks/total_chunks);
 	fclose(fplain);
 	fclose(fcipher);
 	return 0;
