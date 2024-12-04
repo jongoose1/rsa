@@ -22,25 +22,24 @@ int main(int argc, char **argv) {
 		return 1;
 	}
 	
-	char *fname, *fsignname;
+	/* file, signature, key */
+	char *fnames[3];
+	int kp_mode = 0, stage = 0, i;
 	keypair kp;
-	
-	fname = argv[1];
-	fsignname = argv[2];
-	if (strcmp(argv[3], "-kp") == 0) {
-		if (argc != 5) {
-			print_usage(argv[0]);
-			return 1;
-		}
-		if (keypair_load(&kp, argv[4])) return 1;
-	} else {
-		if (public_key_load(&kp.pk, argv[3])) return 1;
+	for (i = 1; i < argc; i++) {
+		if (strcmp(argv[i], "-kp") == 0) {
+			kp_mode = 1;
+			if (argc != 5) {
+				printf("Invalid number of arguments\n");
+				print_usage(argv[0]);
+				return 1;
+			}
+		} else fnames[stage++] = argv[i];
 	}
 
-	if (verify_file(fname, fsignname, &kp.pk)) {
-		printf("File has been verified by the signature.\n");
-	} else {
-		printf("File has NOT been verified by the signature.\n");
-	}
+	if (kp_mode && keypair_load(&kp, fnames[2])) return 1;
+	else if (public_key_load(&kp.pk, fnames[2])) return 1;
+	if (verify_file(fnames[0], fnames[1], &kp.pk)) printf("File has been verified by the signature.\n");
+	else printf("File has NOT been verified by the signature.\n");
 	return 0;
 }
