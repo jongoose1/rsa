@@ -190,6 +190,16 @@ static int bignum_half_print(bignum const *a){
 	return 0;
 }
 
+static int bignum_print_256(bignum const *a) {
+	if (!a) return 1;
+#if NWORDS>7
+	int i;
+	for (i = 7; i >= 0; i--) printf("%08x ", a->a[i]);
+	printf("\n");
+#endif
+	return 0;
+}
+
 /* End helper functions. */
 
 /* O(log(n)) */
@@ -610,19 +620,12 @@ bignum random_large_probable_prime(int tests_required, int tid) {
 			int result = miller_rabin(&candidate, &witness);
 			if (result == -1 || result == 0) { 
 				/* Invalid candidate or candidate is composite. */
-				if (result == 0) {
-					pthread_mutex_lock(&lock);
-					bignum_quarter_print(&witness);
-					printf("is a Miller-Rabin witness for the compositeness of candidate [%d]#%d:\n", tid, number_candidates);
-					bignum_quarter_print(&candidate);
-					printf("\n");
-					pthread_mutex_unlock(&lock);
-				}
+				if (result == 0) printf("Candidate [%d]#%d is composite.\n", tid, number_candidates);
 				break;
 			} else if (result == 1) {
 				/* Test Failed. Candidate is probably prime. */
 				tests_failed++;
-				printf("[%d] Candidate #%d failed test #%d and is probably prime.\n", tid, number_candidates, tests_failed);
+				printf("Candidate [%d]#%d failed test #%d and is probably prime.\n", tid, number_candidates, tests_failed);
 			}
 		}
 	}
@@ -687,11 +690,6 @@ keypair keygen(void) {
 		for (i = NTHREADS; i < NTHREADS*2; i++) {
 			pthread_join(ts[i], NULL);
 		}
-
-		/*
-		p = random_large_probable_prime(10);
-		q = random_large_probable_prime(10);
-		*/
 
 		/* there is no check for the the difference of the primes */
 		/* odds of this being a problem are negligible when compared to
@@ -945,13 +943,13 @@ int public_key_load(public_key *pk, char const *filename) {
 
 /* O(log(n)) */
 int keypair_print(keypair const *keys) {
+	if (!keys) return 1;
+	public_key_print(&keys->pk);
 	if (!keys->sk.encrypted) {
 		printf("Secret key is not encrypted, not printing...\n");
 		return 1;
 	}
-	if (!keys) return 1;
-	public_key_print(&keys->pk);
-	printf("Private Key:\n");
+	printf("Encrypted Secret Key:\n");
 	printf("d:\n");
 	bignum_half_print(&keys->sk.d);
 	return 0;
@@ -1067,17 +1065,19 @@ int verify_bignum(bignum const *m, bignum const *signature, public_key const *pk
 }
 
 int sign_file(char *filename, char *signature_filename, keypair const *kp) {
-	printf("Hashing...\n");
 	bignum x = jg2_file(filename, &kp->pk);
 	
 	/* only sign the least significant 256 bits of hash. 
 	if you sign the whole hash, youll undo the last step of the hash. */
 	memset(x.a+8, 0, NWORDS*4 - 32);
 
-	printf("Signing...\n");
+	printf("JG2 digest:\n");
+	bignum_print_256(&x);
+	printf("\n");
+
 	bignum signature = sign_bignum(&x, kp);
 	printf("Signature:\n");
-	bignum_print(&signature);
+	bignum_half_print(&signature);
 	FILE *fp = fopen(signature_filename, "wb");
 	fwrite(&signature, sizeof(signature), 1 ,fp);
 	fclose(fp);

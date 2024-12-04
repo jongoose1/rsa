@@ -5,6 +5,7 @@ ciphers/
 *.x
 *.o
 *.kp
+*.pk
 *.txt
 decrypt
 encrypt
