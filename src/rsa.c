@@ -8,8 +8,6 @@
 #include "rsa.h"
 
 /* Threading */
-#define NTHREADS 5
-
 typedef struct {
 	int tid;
 	bignum *prime;
@@ -621,7 +619,7 @@ bignum bignum_lcm(bignum const *a, bignum const *b) {
 }
 
 /* O(log^4(n)) */
-keypair keygen(void) {
+keypair keygen(int nthreads) {
 	bignum p, q, n, lambda;
 	bignum const one = bignum_small(1);
 	bignum n_minimum = bignum_zero();
@@ -629,28 +627,34 @@ keypair keygen(void) {
 	n = bignum_zero();
 	while (bignum_is_lt(&n, &n_minimum)) {
 		/* Choose two large prime numbers p and q. */
-		pthread_t ts[NTHREADS*2];
-		args_t argsa[NTHREADS*2];
-		int i;
-		for (i=0; i < NTHREADS; i++){
-			argsa[i].tid = i;
-			argsa[i].prime = &p;
-			pthread_create(&ts[i], NULL, tf, &argsa[i]);
+		if (nthreads == 1) {
+			p = random_large_probable_prime(10, 0);
+			q = random_large_probable_prime(10, 0);
+		} else {
+			pthread_t *ts = malloc(sizeof(pthread_t)*nthreads*2);
+			args_t *argsa = malloc(sizeof(args_t)*nthreads*2);
+			int i;
+			for (i=0; i < nthreads; i++){
+				argsa[i].tid = i;
+				argsa[i].prime = &p;
+				pthread_create(&ts[i], NULL, tf, &argsa[i]);
+			}
+			for (i = 0; i < nthreads; i++) {
+				pthread_join(ts[i], NULL);
+			}
+			prime_found = 0;
+			
+			for (i=nthreads; i < nthreads*2; i++){
+				argsa[i].tid = i;
+				argsa[i].prime = &q;
+				pthread_create(&ts[i], NULL, tf, &argsa[i]);
+			}
+			for (i = nthreads; i < nthreads*2; i++) {
+				pthread_join(ts[i], NULL);
+			}
+			free(ts);
+			free(argsa);
 		}
-		for (i = 0; i < NTHREADS; i++) {
-			pthread_join(ts[i], NULL);
-		}
-		prime_found = 0;
-		
-		for (i=NTHREADS; i < NTHREADS*2; i++){
-			argsa[i].tid = i;
-			argsa[i].prime = &q;
-			pthread_create(&ts[i], NULL, tf, &argsa[i]);
-		}
-		for (i = NTHREADS; i < NTHREADS*2; i++) {
-			pthread_join(ts[i], NULL);
-		}
-
 		/* there is no check for the the difference of the primes */
 		/* odds of this being a problem are negligible when compared to
 		   the accuracy of the miller-rabin test */
