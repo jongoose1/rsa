@@ -9,21 +9,33 @@ READ ME!
 `make install`
 
 # Key Generation
-`keygen keypair.kp`\
+`keygen keypair_file [number_threads]`\
 You will be prompted to create a password to encrypt your secret key.
 
 To put your public key in a separate file for sharing:\
-`cppk keypair.kp publickey.pk`
+`cppk keypair_file public_key_file`
 
 # Encrypt
-To encrypt with public key:\
-`encrypt plain.txt publickey.pk`
+To encrypt a file with a public key:\
+`encrypt plaintext_file ciphertext_file public_key_file`
 
-To encrypt with key pair use the -kp option:\
-`encrypt plain.txt cipher.txt -kp keypair.kp`
+To encrypt with a key pair use the -kp option:\
+`encrypt plaintext_file ciphertext_file -kp keypair_file`
+
+To encrypt from stdin use the -s option:\
+`encrypt -s ciphertext_file public_key_file`
+If using the keyboard as input, use CTRL+D (EOF) to signify the end of your plaintext.
+
+Outputs can be piped to encrypt:\
+`ls | encrypt -s ciphertext_file public_key_file`
 
 # Decrypt
-`decrypt cipher.txt plain.txt keypair.kp`
+`decrypt ciphertext_file keypair_file`
+You will be prompted to enter your password.
+
+The output of decrypt can be redirected:\
+`decrypt ciphertext_file keypair_file > plaintext_file`
+When the output is redirected, password prompt will be muted to prevent it from being included in the output. You still need to enter your password (and hit <Enter>) for decryption to begin. 
 
 # Sign
 `sign plain.txt signature.txt keypair.kp`
