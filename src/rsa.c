@@ -10,19 +10,19 @@
 /* Threading */
 typedef struct {
 	int tid;
-	bignum *prime;
+	bignum *primes;
 } args_t;
 
-static int prime_found = 0;
+static int primes_found = 0;
 static pthread_mutex_t lock;
 
 static void *tf(void *arg) {
 	args_t *arguments = (args_t *)arg;
 	bignum p = random_large_probable_prime(10, arguments->tid);
 	pthread_mutex_lock(&lock);
-	if (!prime_found) {
-		prime_found = 1;
-		*arguments->prime = p;
+	if (primes_found < 2) {
+		arguments->primes[primes_found] = p;
+		primes_found++;
 	}
 	pthread_mutex_unlock(&lock);
 	return NULL;
@@ -554,7 +554,7 @@ bignum random_large_probable_prime(int tests_required, int tid) {
 	/* Note: Failing a Miller-Rabin test indicates a candidate is probably prime. */
 	int tests_failed = 0;
 	int number_candidates = 0;
-	while (tests_failed < tests_required && !prime_found) {
+	while (tests_failed < tests_required && primes_found < 2) {
 		
 		/* Find an appropriate candidate. */
 		while (1) {
@@ -572,7 +572,7 @@ bignum random_large_probable_prime(int tests_required, int tid) {
 		number_candidates++;
 
 		tests_failed = 0;
-		while (tests_failed < tests_required && !prime_found) {
+		while (tests_failed < tests_required && primes_found < 2) {
 			witness = bignum_random();
 			bignum_reduce(&witness, &candidate);
 			int result = miller_rabin(&candidate, &witness);
@@ -588,7 +588,7 @@ bignum random_large_probable_prime(int tests_required, int tid) {
 		}
 	}
 	/* this if is unnecessary but helps me sleep at night */
-	if (prime_found) return bignum_zero();
+	if (primes_found >= 2) return bignum_zero();
 	else return candidate;
 }
 
@@ -620,38 +620,33 @@ bignum bignum_lcm(bignum const *a, bignum const *b) {
 
 /* O(log^4(n)) */
 keypair keygen(int nthreads) {
-	bignum p, q, n, lambda;
+	bignum n, lambda;
+	bignum primes[2];
+	bignum *p = &primes[0];
+	bignum *q = &primes[1];
 	bignum const one = bignum_small(1);
 	bignum n_minimum = bignum_zero();
 	n_minimum.a[NWORDS/2 - 1] = 1 << 31;
 	n = bignum_zero();
 	while (bignum_is_lt(&n, &n_minimum)) {
 		/* Choose two large prime numbers p and q. */
+		primes_found = 0;
 		if (nthreads == 1) {
-			p = random_large_probable_prime(10, 0);
-			q = random_large_probable_prime(10, 0);
+			primes[0] = random_large_probable_prime(10, 0);
+			primes[1] = random_large_probable_prime(10, 0);
 		} else {
-			pthread_t *ts = malloc(sizeof(pthread_t)*nthreads*2);
-			args_t *argsa = malloc(sizeof(args_t)*nthreads*2);
+			pthread_t *ts = malloc(sizeof(pthread_t)*nthreads);
+			args_t *argsa = malloc(sizeof(args_t)*nthreads);
 			int i;
 			for (i=0; i < nthreads; i++){
 				argsa[i].tid = i;
-				argsa[i].prime = &p;
+				argsa[i].primes = primes;
 				pthread_create(&ts[i], NULL, tf, &argsa[i]);
 			}
 			for (i = 0; i < nthreads; i++) {
 				pthread_join(ts[i], NULL);
 			}
-			prime_found = 0;
 			
-			for (i=nthreads; i < nthreads*2; i++){
-				argsa[i].tid = i;
-				argsa[i].prime = &q;
-				pthread_create(&ts[i], NULL, tf, &argsa[i]);
-			}
-			for (i = nthreads; i < nthreads*2; i++) {
-				pthread_join(ts[i], NULL);
-			}
 			free(ts);
 			free(argsa);
 		}
@@ -660,12 +655,12 @@ keypair keygen(int nthreads) {
 		   the accuracy of the miller-rabin test */
 	
 		/* Compute n = pq. */
-		n = bignum_mul(&p, &q);
+		n = bignum_mul(p, q);
 	}
 	/* Compute lambda(n) = lcm(p - 1, q - 1) */
-	p = bignum_sub(&p, &one);
-	q = bignum_sub(&q, &one);
-	lambda = bignum_lcm(&p, &q);
+	*p = bignum_sub(p, &one);
+	*q = bignum_sub(q, &one);
+	lambda = bignum_lcm(p, q);
 	/* Choodean integer e such that 1 < e < lambda(n) and gcd (e, lambda(n)) = 1 */
 	bignum const e = bignum_small(65537);
 	bignum gcd = bignum_gcd(&e, &lambda);
