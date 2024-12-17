@@ -38,11 +38,11 @@ The output of decrypt can be redirected:\
 When the output is redirected, password prompt will be muted to prevent it from being included in the output. You still need to enter your password (and hit \<Enter\>) for decryption to begin. 
 
 # Sign
-`sign plain.txt signature.txt keypair.kp`
+`sign file signature_file keypair_file`
 
 # Verify
 To verify with public key:\
-`verify plain.txt signature.txt publickey.pk`
+`verify file signature_file public_key_file`
 
 To verify with key pair use the -kp option:\
-`verify plain.txt signature.txt -kp keypair.kp`
+`verify file signature_file -kp keypair_file`
