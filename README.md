@@ -23,19 +23,19 @@ To encrypt with a key pair use the -kp option:\
 `encrypt plaintext_file ciphertext_file -kp keypair_file`
 
 To encrypt from stdin use the -s option:\
-`encrypt -s ciphertext_file public_key_file`
+`encrypt -s ciphertext_file public_key_file`\
 If using the keyboard as input, use CTRL+D (EOF) to signify the end of your plaintext.
 
 Outputs can be piped to encrypt:\
 `ls | encrypt -s ciphertext_file public_key_file`
 
 # Decrypt
-`decrypt ciphertext_file keypair_file`
+`decrypt ciphertext_file keypair_file`\
 You will be prompted to enter your password.
 
 The output of decrypt can be redirected:\
-`decrypt ciphertext_file keypair_file > plaintext_file`
-When the output is redirected, password prompt will be muted to prevent it from being included in the output. You still need to enter your password (and hit <Enter>) for decryption to begin. 
+`decrypt ciphertext_file keypair_file > plaintext_file`\
+When the output is redirected, password prompt will be muted to prevent it from being included in the output. You still need to enter your password (and hit \<Enter\>) for decryption to begin. 
 
 # Sign
 `sign plain.txt signature.txt keypair.kp`
