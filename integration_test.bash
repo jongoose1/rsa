@@ -18,7 +18,7 @@ cat plain.txt
 ./verify plain.txt signature.txt -kp keys.kp
 
 # Encrypt.
-./encrypt plain.txt -kp keys.kp
+./encrypt plain.txt cipher.txt -kp keys.kp
 
 echo "Ciphertext:"
 hexdump -x cipher.txt
@@ -27,7 +27,7 @@ hexdump -x cipher.txt
 rm plain.txt
 
 #Decrypt.
-./decrypt cipher.txt plain2.txt keys.kp
+./decrypt cipher.txt keys.kp > plain2.txt
 echo "Plaintext:"
 cat plain2.txt
 
