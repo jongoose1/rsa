@@ -30,46 +30,6 @@ static void *tf(void *arg) {
 	return NULL;
 }
 
-typedef struct {
-	bignum c;
-	u32 chunk_index;
-} payload;
-
-/* shared decrypt threads memory */
-static keypair const *global_kp;
-static FILE *global_plaintext;
-static pthread_mutex_t decrypt_lock;
-static int completed_chunks;
-static int total_chunks;
-
-/* set to one once jobs have been assigned. signals threads to end */
-static int jobs_assigned = 0;
-
-/* signals a new job has been assigned or completed */
-static int complete[NTHREADS];
-
-/* job info for each thread */
-payload payloads[NTHREADS];
-
-static void *decrypt_tf(void * arg) {
-	int tid = *(int *)arg;
-	while (!complete[tid] || !jobs_assigned) {
-		if (!complete[tid]) {
-			/* a job has been assigned */
-			inplace_decrypt(&payloads[tid].c, global_kp);
-			pthread_mutex_lock(&decrypt_lock);
-			fseek(global_plaintext, (payloads[tid].chunk_index-1)*MSIZE, SEEK_SET);
-			fwrite(payloads[tid].c.a, MSIZE, 1, global_plaintext);
-			completed_chunks++;
-			printf("[%d] Chunk %d/%d %.2f%%\n", tid, payloads[tid].chunk_index + 1, total_chunks, (float)100*completed_chunks/total_chunks);
-			pthread_mutex_unlock(&decrypt_lock);
-			complete[tid] = 1;
-		}
-		sleep(0.1);
-	}
-	return NULL;
-}
-
 /* Begin helper functions. */
 
 /* O(log(n)) */
@@ -771,15 +731,24 @@ bignum decrypt(bignum const *c, keypair const *kp) {
 /* O(m*log^3(n)) */
 int encrypt_file(char const *fplainname, char const *fciphername, public_key const *pk) {
 	FILE *fplain, *fcipher;
-	char buffer[11] = "cipher.txt";
-	bignum m;
-	u32 chunks = 0;
 	if(!fplainname || !pk || bignum_is_zero(&pk->n)) return 1;
 	fplain = fopen(fplainname, "rb");
 	if (!fplain) return 1;
+	char buffer[11] = "cipher.txt";
 	if (!fciphername) fciphername = buffer;
 	fcipher = fopen(fciphername, "wb");
 	if (!fcipher) return 1;
+
+	if (encrypt_stream(fplain, fcipher, pk)) return 1;
+	fclose(fplain);
+	fclose(fcipher);
+	return 0;
+}
+
+int encrypt_stream(FILE *fplain, FILE *fcipher, public_key const *pk){
+	bignum m;
+	u32 chunks = 0;
+	
 	/* Metadata. 0 placeholder. */
 	m = bignum_zero();
 	if (fwrite(&m, DSIZE, 1, fcipher) != 1) return 1;
@@ -796,85 +765,61 @@ int encrypt_file(char const *fplainname, char const *fciphername, public_key con
 	/* Go back and write metadata. */
 	m = bignum_zero();
 	m.a[0] = chunks;
+	/* last chunk size */
 	m.a[1] = bytes_read;
 	inplace_encrypt(&m, pk, 0);
 	fseek(fcipher, 0, SEEK_SET);
 	if (fwrite(m.a, DSIZE, 1, fcipher) != 1) return 1;
-	fclose(fplain);
-	fclose(fcipher);
 	return 0;
 }
 
 /* O(m*log^3(n)) */
 int decrypt_file(char const *fciphername, char const *fplainname, keypair const *kp) {
+	FILE *fplain, *fcipher;
+	if (!fciphername || !fplainname || !kp || bignum_is_zero(&kp->pk.n)) return 1;
+	fcipher = fopen(fciphername, "rb");
+	fplain = fopen(fplainname, "wb");
+	if (!fplain || !fcipher) return 1;
+	
+	if (decrypt_stream(fcipher, fplain, kp)) return 1;
+	fclose(fplain);
+	fclose(fcipher);
+	return 0;
+}
+
+int decrypt_stream(FILE *fcipher, FILE *fplain, keypair const *kp) {
+	if (!fcipher || !fplain || !kp || bignum_is_zero(&kp->pk.n)) return 1;
 	if (kp->sk.encrypted) {
-		printf("Secret key is encrypted\n");
+		fprintf(stderr, "Secret key is encrypted\n");
 		return 1;
 	}
-	FILE *fplain, *fcipher;
 	bignum c;
-	if (!fciphername || !kp || bignum_is_zero(&kp->pk.n)) return 1;
-	fcipher = fopen(fciphername, "rb");
-	if (!fcipher) return 1;
-	fplain = fopen(fplainname, "wb");
-	if (!fplain) return 1;
 	/* Metadata. */
-	printf("Decrypting metadata\n");
 	c = bignum_zero();
 	if (fread(c.a, DSIZE, 1, fcipher) != 1) return 1;
 	inplace_decrypt(&c, kp);
-	completed_chunks = 1;
-	total_chunks = c.a[0];
+	u32 completed_chunks = 1;
+	u32 total_chunks = c.a[0];
+	u32 remaining_chunks = total_chunks - completed_chunks;
 	u32 last_chunk_size = c.a[1];
-	printf("Chunk 1/%d %.2f%%\n", total_chunks, 100.0F/total_chunks);
 	if (last_chunk_size > MSIZE || last_chunk_size == 0) {
-		printf("Invalid metadata, most likely wrong key or password\n");
+		fprintf(stderr, "Invalid metadata, most likely wrong key or password\n");
 		last_chunk_size = MSIZE;
 	}
 	/* Data. */
-	printf("Decrypting data\n");
-	global_kp = kp;
-	global_plaintext = fplain;
-
-	/* create threads */
-	pthread_t ts[NTHREADS];
-	int tids[NTHREADS];
-	int i;
-	for (i=0; i < NTHREADS; i++){
-		tids[i] = i;
-		complete[i] = 1;
-		pthread_create(&ts[i], NULL, decrypt_tf, &tids[i]);
-	}
-
-	/* assign jobs */
-	for (i = 1; i < total_chunks - 1; i++) {
-		c = bignum_zero();
-		fread(c.a, DSIZE, 1, fcipher);
-		int j;
-		/* too lazy to use cond signals */
-		for (j=0; !complete[j]; j = (j+1)%NTHREADS) sleep(0.1); 
-		payloads[j].c = c;
-		payloads[j].chunk_index = i;
-		complete[j] = 0;
-	}
-
-	jobs_assigned = 1;
-
-	/* wait for remaining jobs to complete */
-	for (i = 0; i < NTHREADS; i++) {
-		pthread_join(ts[i], NULL);
-	}
-	
-	/* decrypt last chunk */
 	c = bignum_zero();
-	fread(c.a, DSIZE, 1, fcipher);
-	inplace_decrypt(&c, kp);
-	fseek(fplain, (total_chunks - 2)*MSIZE, SEEK_SET);
-	fwrite(c.a, last_chunk_size, 1, fplain);
-	completed_chunks++;
-	printf("Chunk %d/%d %.2f%%\n", total_chunks, total_chunks, (float)100*completed_chunks/total_chunks);
-	fclose(fplain);
-	fclose(fcipher);
+	while (fread(c.a, DSIZE, 1, fcipher) == 1) {
+		inplace_decrypt(&c, kp);
+		remaining_chunks--;
+		completed_chunks++;
+		if (remaining_chunks > 0) {
+			if (fwrite(c.a, MSIZE, 1, fplain) != 1) return 1;
+		} else {
+			if (fwrite(c.a, last_chunk_size, 1, fplain) != 1) return 1;
+		}
+		c = bignum_zero();
+	}
+
 	return 0;
 }
 
@@ -1037,6 +982,9 @@ int decrypt_secret_key(char * password, keypair *kp){
 }
 
 int get_password(char *password, int buffer_size, char *prompt){
+	/* pass prompt = NULL to not print prompt to stdout */
+	/* used when redirecting decrypt output */
+
 	static struct termios old, new;
 	char c;
 
@@ -1045,9 +993,9 @@ int get_password(char *password, int buffer_size, char *prompt){
 	new.c_lflag &= ~ECHO;
 	if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &new) != 0) return -1;
 	int password_length = 0;
-	printf("%s", prompt);
+	if (prompt) printf("%s", prompt);
 	while ((c=getchar())!='\n' && c!=EOF && password_length+1 < buffer_size) password[password_length++] = c;
-	printf("\n");
+	if (prompt) printf("\n");
 	password[password_length] = '\0';
 	tcsetattr(STDIN_FILENO, TCSAFLUSH, &old);
 	return password_length;

@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include <stdio.h>
 
 /*
 Number of 4 byte words in a bignum
@@ -82,7 +83,9 @@ int inplace_encrypt(bignum * m, public_key const *pk, int dont_pad);
 bignum encrypt(bignum const *m, public_key const *pk, int dont_pad);
 int inplace_decrypt(bignum * c, keypair const *kp);
 bignum decrypt(bignum const *c, keypair const *kp);
+int encrypt_stream(FILE *fplain, FILE *fcipher, public_key const *pk);
 int encrypt_file(char const *fplainname, char const *fciphername, public_key const *pk);
+int decrypt_stream(FILE *fcipher, FILE *fplain, keypair const *kp);
 int decrypt_file(char const *fciphername, char const *fplainname, keypair const *kp);
 int keypair_save(keypair const *keys, char const *filename);
 int keypair_load(keypair *keys, char const *filename);
