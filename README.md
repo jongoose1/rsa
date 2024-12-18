@@ -49,6 +49,17 @@ You will be prompted to enter your password.
 To verify with key pair use the -kp option:  
 `verify file signature_file -kp keypair_file`
 
+# Hash
+
+`jg2 file public_key_file`
+
+To hash with key pair use the -kp option:  
+`jg2 file -kp keypair_file`
+
+To hash from stdin omit file:  
+`jg2 public_key_file`
+If using the keyboard as input, use CTRL+D (EOF) to signify the end.
+
 # Tips
 
 Outputs can be piped to encrypt:  
@@ -62,5 +73,13 @@ When the output is redirected or piped, the password prompt will be muted to pre
 You can use these together to edit an encrypted file without ever writing the plaintext to disk:  
 `decrypt ciphertext_file keypair_file | sed 's/find/replace/' | encrypt -s new_ciphertext_file -kp keypair_file`  
 Note the difference between `ciphertext_file` and `new_ciphertext_file`. You cannot directly overwrite the ciphertext file as it is being read by decrypt. Doing so will corrupt your ciphertext beyond recovery. D:  
+
+Outputs can be piped to jg2. The following are functionally the same:  
+`cat file | jg2 public_key_file`  
+`jg2 file public_key_file`
+
+The output of jg2 can be redirected or piped:  
+`jg2 file public_key_file > hash_file`  
+`jg2 file public_key_file | diff hash_file -`
 
 Decrypting takes a very long time. I do not recommend using this program for large files.
