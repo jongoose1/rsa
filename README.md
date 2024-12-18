@@ -2,8 +2,7 @@ READ ME!
 
 ![READ ME!](https://c.tenor.com/zEtUpuHrIzwAAAAC/tenor.gif)
 
-Bad RSA implementation. 4096 bit modulus. Password-based secret key encryption (stream cipher using JG2 hashing as PRNG).  
-Linux only.
+Bad RSA implementation. 4096 bit modulus. Password-based secret key encryption. Linux only.
 
 # Compile
 
