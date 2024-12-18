@@ -139,6 +139,7 @@ static int last_one_bit(bignum const *a) {
 	return -1;
 }
 
+/* not used, but could be useful
 static int bignum_quarter_print(bignum const *a){
 	if (!a) return 1;
 	int i, j, k;
@@ -151,6 +152,7 @@ static int bignum_quarter_print(bignum const *a){
 	}
 	return 0;
 }
+*/
 
 static int bignum_half_print(bignum const *a){
 	if (!a) return 1;
@@ -480,7 +482,8 @@ int miller_rabin(bignum const * n, bignum const * a) {
 /* O(log(n)) */
 bignum bignum_random(void) {
 	bignum r;
-	random_bytes(r.a, NWORDS*4);
+	/* run until success */
+	while (random_bytes(r.a, NWORDS*4)) fprintf(stderr, "random_bytes() failed, retrying...\n");
 	r.sign = 0;
 	return r;
 }
@@ -489,7 +492,8 @@ bignum bignum_random(void) {
 bignum bignum_half_random(void) {
 	bignum r;
 	int i;
-	random_bytes(r.a, NWORDS*2);
+	/* run until success */
+	while (random_bytes(r.a, NWORDS*2)) fprintf(stderr, "random_bytes() failed, retrying...\n");
 	for (i = NWORDS/2; i < NWORDS; i++) r.a[i] = 0;
 	r.sign = 0;
 	return r;
@@ -499,7 +503,8 @@ bignum bignum_half_random(void) {
 bignum bignum_quarter_random(void) {
 	bignum r;
 	int i;
-	random_bytes(r.a, NWORDS);
+	/* run until success */
+	while (random_bytes(r.a, NWORDS)) fprintf(stderr, "random_bytes() failed, retrying...\n");
 	for (i = NWORDS/4; i < NWORDS; i++) r.a[i] = 0;
 	r.sign = 0;
 	return r;
@@ -699,7 +704,8 @@ keypair keygen(int nthreads) {
 /* O(log(n)) */
 int bignum_pad(bignum * m) {
 	if (NPADDING == 0) return 0;
-	random_bytes(m->a + MSIZE/4, NPADDING*4);
+	/* run until success */
+	while (random_bytes(m->a + MSIZE/4, NPADDING*4)) fprintf(stderr, "random_bytes() failed, retrying...\n");
 	return 0;
 }
 
