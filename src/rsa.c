@@ -7,6 +7,8 @@
 #include <unistd.h>
 #include "rsa.h"
 
+int dr;
+
 /* Threading */
 typedef struct {
 	int tid;
@@ -28,7 +30,22 @@ static void *tf(void *arg) {
 	return NULL;
 }
 
-/* Begin helper functions. */
+static int random_bytes(void *l, size_t nbytes) {
+	if (dr < 0) return 1;
+	char *location = (char *)l;
+	size_t bytes_recvd = 0;
+	pthread_mutex_lock(&lock);
+	while (bytes_recvd < nbytes) {
+		ssize_t result = read(dr, location + bytes_recvd, nbytes - bytes_recvd);
+		if (result < 0) {
+			pthread_mutex_unlock(&lock);
+			return 1;
+		}
+		bytes_recvd += result;
+	}
+	pthread_mutex_unlock(&lock);
+	return 0;
+}
 
 /* O(log(n)) */
 static int bit_shift_left(bignum * a) {
@@ -157,8 +174,6 @@ static int bignum_print_256(bignum const *a) {
 #endif
 	return 0;
 }
-
-/* End helper functions. */
 
 /* O(log(n)) */
 int bignum_print(bignum const *a) {
@@ -465,8 +480,7 @@ int miller_rabin(bignum const * n, bignum const * a) {
 /* O(log(n)) */
 bignum bignum_random(void) {
 	bignum r;
-	int i;
-	for (i = 0; i < NWORDS; i++) r.a[i] = rand();
+	random_bytes(r.a, NWORDS*4);
 	r.sign = 0;
 	return r;
 }
@@ -475,7 +489,7 @@ bignum bignum_random(void) {
 bignum bignum_half_random(void) {
 	bignum r;
 	int i;
-	for (i = 0; i < NWORDS/2; i++) r.a[i] = rand();
+	random_bytes(r.a, NWORDS*2);
 	for (i = NWORDS/2; i < NWORDS; i++) r.a[i] = 0;
 	r.sign = 0;
 	return r;
@@ -485,7 +499,7 @@ bignum bignum_half_random(void) {
 bignum bignum_quarter_random(void) {
 	bignum r;
 	int i;
-	for (i = 0; i <NWORDS/4; i++) r.a[i] = rand();
+	random_bytes(r.a, NWORDS);
 	for (i = NWORDS/4; i < NWORDS; i++) r.a[i] = 0;
 	r.sign = 0;
 	return r;
@@ -684,9 +698,8 @@ keypair keygen(int nthreads) {
 
 /* O(log(n)) */
 int bignum_pad(bignum * m) {
-	int i;
 	if (NPADDING == 0) return 0;
-	for (i = MSIZE/4; i < DSIZE/4 - 1; i++) m->a[i] = rand();
+	random_bytes(m->a + MSIZE/4, NPADDING*4);
 	return 0;
 }
 

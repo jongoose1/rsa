@@ -2,7 +2,11 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <fcntl.h>
+#include <unistd.h>
 #include "rsa.h"
+
+extern int dr;
 
 int print_usage(char * exe) {
 		printf("Usage: %s plain.txt cipher.txt publickey.pk\n", exe);
@@ -24,6 +28,9 @@ int main(int argc, char **argv) {
 		print_usage(argv[0]);
 		return 1;
 	}
+
+	dr = open("/dev/random", O_RDONLY);
+	if (dr < 0) return 1;
 	
 	keypair kp;
 	/* plain, cipher, key */
@@ -63,5 +70,6 @@ int main(int argc, char **argv) {
 	if (encrypt_stream(p, c, &kp.pk)) return 1;
 	if (!s_mode) fclose(p);
 	fclose(c);
+	close(dr);
 	return 0;
 }

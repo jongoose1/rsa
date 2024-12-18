@@ -2,6 +2,7 @@ release/
 debug/
 keys/
 ciphers/
+*.out
 *.x
 *.o
 *.kp

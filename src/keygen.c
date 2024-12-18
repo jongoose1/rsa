@@ -1,7 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
+#include <fcntl.h>
+#include <unistd.h>
 #include "rsa.h"
+
+extern int dr;
 
 int print_usage(char * exe) {
 	printf("Usage: %s keypair.kp\n", exe);
@@ -9,7 +12,6 @@ int print_usage(char * exe) {
 }
 
 int main(int argc, char ** argv) {
-	srand(time(0));
 	if (argc < 2) {
 		printf("Too few arguments.\n");
 		print_usage(argv[0]);
@@ -21,6 +23,9 @@ int main(int argc, char ** argv) {
 		return 1;
 	}
 	
+	dr = open("/dev/random", O_RDONLY);
+	if (dr < 0) return 1;
+	
 	char password[64];
 	if (get_password(password, 64, "Create a Password:") == -1) return 1;
 	int nthreads = 1;
@@ -30,6 +35,8 @@ int main(int argc, char ** argv) {
 	}
 	keypair kp = keygen(nthreads);
 	encrypt_secret_key(password, &kp);
+
+	close(dr);
 
 	return keypair_save(&kp, argv[1]);
 }
