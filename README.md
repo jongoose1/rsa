@@ -11,8 +11,7 @@ Bad RSA implementation. 4096 bit modulus. Password-based secret key encryption. 
 # Install
 
 `make install`  
-This copies binaries to `~/bin`. If this directory is not included in your `$PATH`, run:  
-`PATH="$HOME/bin:$PATH"`
+This copies binaries to `~/bin`.
 
 # Key Generation
 
