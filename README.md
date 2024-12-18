@@ -56,7 +56,7 @@ To hash with key pair use the -kp option:
 `jg2 file -kp keypair_file`
 
 To hash from stdin omit file:  
-`jg2 public_key_file`
+`jg2 public_key_file`  
 If using the keyboard as input, use CTRL+D (EOF) to signify the end.
 
 # Tips
