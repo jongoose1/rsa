@@ -61,6 +61,6 @@ When the output is redirected or piped, the password prompt will be muted to pre
 
 You can use these together to edit an encrypted file without ever writing the plaintext to disk:  
 `decrypt ciphertext_file keypair_file | sed 's/find/replace/' | encrypt -s new_ciphertext_file -kp keypair_file`  
-Note the difference between ciphertext_file and new_ciphertext_file. You cannot directly overwrite the ciphertext file as it is being read by decrypt. Doing so will corrupt your ciphertext beyond recovery. D:  
+Note the difference between `ciphertext_file` and `new_ciphertext_file`. You cannot directly overwrite the ciphertext file as it is being read by decrypt. Doing so will corrupt your ciphertext beyond recovery. D:  
 
 Decrypting takes a very long time. I do not recommend using this program for large files.
