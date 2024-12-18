@@ -96,6 +96,8 @@ int public_key_print(public_key const *pk);
 keypair keygen(int nthreads);
 bignum jg2(void * d, size_t n, public_key const *pk);
 bignum jg2_file(char *fname, public_key const *pk);
+bignum jg2_stream(FILE *fp, public_key const *pk);
+int bignum_print_256(bignum const *a);
 bignum bignum_xor(bignum const *a, bignum const *b);
 int encrypt_secret_key(char * password, keypair *kp);
 int decrypt_secret_key(char * password, keypair *kp);

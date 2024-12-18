@@ -1,9 +1,7 @@
-/* encrypt.c */
 #include <stdio.h>
 #include <string.h>
-#include <stdlib.h>
-#include <fcntl.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include "rsa.h"
 
 extern int dr;

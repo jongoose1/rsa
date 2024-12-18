@@ -1,4 +1,4 @@
-OUTS := encrypt decrypt keygen cppk print_keypair print_public_key sign verify
+OUTS := encrypt decrypt keygen cppk print_keypair print_public_key sign verify jg2
 INSTALLDIR := ~/bin
 
 .PHONY: all

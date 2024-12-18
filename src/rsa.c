@@ -167,12 +167,11 @@ static int bignum_half_print(bignum const *a){
 	return 0;
 }
 
-static int bignum_print_256(bignum const *a) {
+int bignum_print_256(bignum const *a) {
 	if (!a) return 1;
 #if NWORDS>7
 	int i;
-	for (i = 7; i >= 0; i--) printf("%08x ", a->a[i]);
-	printf("\n");
+	for (i = 7; i >= 0; i--) printf("%08x", a->a[i]);
 #endif
 	return 0;
 }
@@ -954,6 +953,12 @@ bignum jg2_file(char *fname, public_key const *pk) {
 	if (!fname || !pk) return bignum_zero();
 	FILE *fp = fopen(fname, "rb");
 	if (!fp) return bignum_zero();
+	bignum r = jg2_stream(fp, pk);
+	fclose(fp);
+	return r;
+}
+
+bignum jg2_stream(FILE *fp, public_key const *pk) {
 	bignum hash = bignum_zero();
 	char * hp = (char *) hash.a;
 	u32 bytes_read;
@@ -964,7 +969,6 @@ bignum jg2_file(char *fname, public_key const *pk) {
 		hash.a[DSIZE/4 - 1] = 0;
 		inplace_encrypt(&hash, pk, 1);
 	} while (bytes_read == BSIZE);
-	fclose(fp);
 	return hash;
 }
 
@@ -1045,6 +1049,7 @@ int sign_file(char *filename, char *signature_filename, keypair const *kp) {
 	printf("Signature:\n");
 	bignum_half_print(&signature);
 	FILE *fp = fopen(signature_filename, "wb");
+	if (!fp) return 1;
 	fwrite(&signature, sizeof(signature), 1 ,fp);
 	fclose(fp);
 	return 0;
@@ -1053,15 +1058,18 @@ int sign_file(char *filename, char *signature_filename, keypair const *kp) {
 int verify_file(char *filename, char *signature_filename, public_key const *pk) {
 	/* return 1: VERIFIED
 	   return 0; NOT VERIFIED */
-	printf("Hashing...\n");
 	bignum x = jg2_file(filename, pk);
 	/* only the least significant 256 bits of hash should have been signed */
 	memset(x.a + 8, 0, NWORDS*4 - 32);
 	
+	printf("JG2 digest:\n");
+	bignum_print_256(&x);
+	printf("\n");
+	
 	bignum signature;
 	FILE *fp = fopen(signature_filename, "rb");
+	if (!fp) return 0;
 	fread(&signature, sizeof(signature), 1, fp);
 	fclose(fp);
-	printf("Verifying...\n");
 	return verify_bignum(&x, &signature, pk);
 }
