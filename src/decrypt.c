@@ -2,6 +2,8 @@
 #include <unistd.h>
 #include "rsa.h"
 
+#define PSIZE 1024
+
 int print_usage(char * exe) {
 		printf("Usage: %s cipher.txt keypair.kp\n", exe);
 		return 0;
@@ -19,16 +21,12 @@ int main(int argc, char **argv) {
 		return 1;
 	}
 
-	char  *fkeyname, password[64];
+	char  *fkeyname, password[PSIZE];
 	FILE *fcipher = fopen(argv[1], "rb");
 	if (!fcipher) return 1;
 	fkeyname = argv[2];
-	if (isatty(STDOUT_FILENO)) {
-		if (get_password(password, 64, "Enter password:") == -1) return 1;
-	} else {
-		/* output is redirected, do not print prompt to encsure decrypted file is exactly the same as its original version */
-		if (get_password(password, 64, 0) == -1) return 1;
-	}	
+	
+	if (get_password(password, PSIZE, "Enter password:") == -1) return 1;
 
 	keypair kp;
 	if (keypair_load(&kp, fkeyname)) return 1;

@@ -1015,9 +1015,9 @@ int get_password(char *password, int buffer_size, char *prompt){
 	new.c_lflag &= ~ECHO;
 	if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &new) != 0) return -1;
 	int password_length = 0;
-	if (prompt) printf("%s", prompt);
+	if (prompt) fprintf(stderr, "%s", prompt);
 	while ((c=getchar())!='\n' && c!=EOF && password_length+1 < buffer_size) password[password_length++] = c;
-	if (prompt) printf("\n");
+	if (prompt) fprintf(stderr, "\n");
 	password[password_length] = '\0';
 	tcsetattr(STDIN_FILENO, TCSAFLUSH, &old);
 	return password_length;
